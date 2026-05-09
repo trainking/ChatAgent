@@ -1,73 +1,101 @@
 <template>
-  <el-container class="layout-container">
-    <el-aside width="220px" class="layout-aside">
-      <div class="logo">
-        <h2>ChatAgent</h2>
+  <el-container class="pro-layout">
+    <!-- Sidebar -->
+    <el-aside :width="collapsed ? '64px' : '220px'" class="pro-sider">
+      <div class="pro-logo" :class="{ collapsed }">
+        <el-icon :size="24"><ChatDotRound /></el-icon>
+        <span v-show="!collapsed" class="logo-text">ChatAgent</span>
       </div>
-      <el-menu
-        router
-        :default-active="route.path"
-        background-color="#001529"
-        text-color="#fff"
-        active-text-color="#409eff"
-      >
-        <el-menu-item index="/dashboard/inbox">
-          <el-icon><ChatDotRound /></el-icon>
-          <span>{{ $t('layout.inbox') }}</span>
-        </el-menu-item>
-        <el-menu-item v-if="userStore.isAdmin()" index="/dashboard/users">
-          <el-icon><UserFilled /></el-icon>
-          <span>{{ $t('layout.users') }}</span>
-        </el-menu-item>
-        <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/roles">
-          <el-icon><Setting /></el-icon>
-          <span>{{ $t('layout.roles') }}</span>
-        </el-menu-item>
-        <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/system">
-          <el-icon><Tools /></el-icon>
-          <span>{{ $t('layout.system') }}</span>
-        </el-menu-item>
-      </el-menu>
+
+      <el-scrollbar>
+        <el-menu
+          :default-active="route.path"
+          :collapse="collapsed"
+          :collapse-transition="false"
+          background-color="#001529"
+          text-color="#ffffffa6"
+          active-text-color="#fff"
+          router
+        >
+          <el-menu-item index="/dashboard/inbox">
+            <el-icon><ChatDotRound /></el-icon>
+            <template #title>{{ $t('layout.inbox') }}</template>
+          </el-menu-item>
+          <el-menu-item v-if="userStore.isAdmin()" index="/dashboard/users">
+            <el-icon><UserFilled /></el-icon>
+            <template #title>{{ $t('layout.users') }}</template>
+          </el-menu-item>
+          <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/roles">
+            <el-icon><Setting /></el-icon>
+            <template #title>{{ $t('layout.roles') }}</template>
+          </el-menu-item>
+          <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/system">
+            <el-icon><Tools /></el-icon>
+            <template #title>{{ $t('layout.system') }}</template>
+          </el-menu-item>
+        </el-menu>
+      </el-scrollbar>
     </el-aside>
-    <el-container>
-      <el-header class="layout-header">
-        <span class="header-title">{{ $t('layout.title') }}</span>
+
+    <!-- Main -->
+    <el-container class="pro-main">
+      <!-- Header -->
+      <el-header class="pro-header">
+        <div class="header-left">
+          <el-icon class="collapse-btn" :size="20" @click="collapsed = !collapsed">
+            <Fold v-if="!collapsed" /><Expand v-else />
+          </el-icon>
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item :to="{ path: '/' }">Home</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="route.matched.length > 1">
+              {{ breadcrumbTitle }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
         <div class="header-right">
           <el-dropdown @command="handleLangSwitch">
-            <el-button size="small" text>
+            <span class="action-item">
               <el-icon><Switch /></el-icon>
-              <span style="margin-left: 4px">{{ locale === 'zh-CN' ? $t('lang.zh') : $t('lang.en') }}</span>
-            </el-button>
+              <span>{{ locale === 'zh-CN' ? $t('lang.zh') : $t('lang.en') }}</span>
+            </span>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="zh-CN">
-                  <span :style="{ fontWeight: locale === 'zh-CN' ? 'bold' : 'normal' }">{{ $t('lang.zh') }}</span>
+                  <span :class="{ bold: locale === 'zh-CN' }">{{ $t('lang.zh') }}</span>
                 </el-dropdown-item>
                 <el-dropdown-item command="en-US">
-                  <span :style="{ fontWeight: locale === 'en-US' ? 'bold' : 'normal' }">{{ $t('lang.en') }}</span>
+                  <span :class="{ bold: locale === 'en-US' }">{{ $t('lang.en') }}</span>
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+
           <el-dropdown>
-            <span class="user-info">
-              <el-avatar :size="32" icon="UserFilled" />
+            <span class="action-item user-action">
+              <el-avatar :size="28" icon="UserFilled" />
               <span class="user-name">{{ userStore.user?.name || 'User' }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="handleChangePassword">{{ $t('layout.changePassword') }}</el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">{{ $t('layout.logout') }}</el-dropdown-item>
+                <el-dropdown-item @click="showPwdDialog = true">
+                  <el-icon><Key /></el-icon>{{ $t('layout.changePassword') }}
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">
+                  <el-icon><SwitchButton /></el-icon>{{ $t('layout.logout') }}
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
       </el-header>
-      <el-main>
+
+      <!-- Content -->
+      <el-main class="pro-content">
         <router-view />
       </el-main>
     </el-container>
 
+    <!-- Password Dialog -->
     <el-dialog v-model="showPwdDialog" :title="$t('changePassword.title')" width="420px" :close-on-click-modal="false">
       <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="0">
         <el-form-item prop="old_password">
@@ -101,23 +129,21 @@ const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const collapsed = ref(false)
+
+const breadcrumbTitle = computed(() => {
+  const meta = route.matched[route.matched.length - 1]?.meta || {}
+  return (meta.title as string) || route.name || ''
+})
 
 const showPwdDialog = ref(false)
 const pwdLoading = ref(false)
 const pwdFormRef = ref<FormInstance>()
-
-const pwdForm = reactive({
-  old_password: '',
-  new_password: '',
-  confirm_password: '',
-})
+const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
 
 const validatePwdConfirm = (_rule: unknown, value: string, callback: (err?: Error) => void) => {
-  if (value !== pwdForm.new_password) {
-    callback(new Error(t('changePassword.mismatch')))
-  } else {
-    callback()
-  }
+  if (value !== pwdForm.new_password) callback(new Error(t('changePassword.mismatch')))
+  else callback()
 }
 
 const pwdRules = computed<FormRules>(() => ({
@@ -135,82 +161,94 @@ const pwdRules = computed<FormRules>(() => ({
 async function handlePwdSubmit() {
   const valid = await pwdFormRef.value?.validate().catch(() => false)
   if (!valid) return
-
   pwdLoading.value = true
   try {
     await changePassword(pwdForm.old_password, pwdForm.new_password)
     ElMessage.success(t('changePassword.success'))
     userStore.markPasswordChanged()
     showPwdDialog.value = false
-    pwdForm.old_password = ''
-    pwdForm.new_password = ''
-    pwdForm.confirm_password = ''
-  } catch {
-    // axios interceptor handles error
-  } finally {
-    pwdLoading.value = false
-  }
+    pwdForm.old_password = ''; pwdForm.new_password = ''; pwdForm.confirm_password = ''
+  } catch {} finally { pwdLoading.value = false }
 }
 
-function handleLogout() {
-  userStore.clearAuth()
-  router.push('/login')
-}
+function handleLogout() { userStore.clearAuth(); router.push('/login') }
 
-function handleChangePassword() {
-  showPwdDialog.value = true
-}
-
-function handleLangSwitch(lang: string) {
-  locale.value = lang
-  localStorage.setItem('lang', lang)
-}
+function handleLangSwitch(lang: string) { locale.value = lang; localStorage.setItem('lang', lang) }
 </script>
 
 <style scoped lang="scss">
-.layout-container {
-  height: 100%;
-}
-.layout-aside {
+.pro-layout { height: 100vh; }
+
+.pro-sider {
   background: #001529;
+  transition: width 0.2s;
   overflow: hidden;
-  .logo {
-    height: 64px;
+  .pro-logo {
+    height: 48px;
+    margin: 16px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    h2 {
-      color: #fff;
-      font-size: 18px;
-      white-space: nowrap;
-    }
+    gap: 8px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    transition: all 0.2s;
+    &.collapsed { margin: 16px 12px; }
+    .logo-text { font-size: 16px; font-weight: 600; white-space: nowrap; }
   }
-  .el-menu {
-    border-right: none;
-  }
+  .el-menu { border-right: none; }
 }
-.layout-header {
+
+.pro-main { flex-direction: column; min-width: 0; }
+
+.pro-header {
+  height: 48px !important;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e4e7ed;
-  .header-title {
-    font-size: 16px;
-    font-weight: 500;
+  padding: 0 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .collapse-btn {
+    cursor: pointer;
+    color: #606266;
+    &:hover { color: #409eff; }
   }
   .header-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 16px;
   }
-  .user-info {
+  .action-item {
     display: flex;
     align-items: center;
+    gap: 4px;
     cursor: pointer;
-    .user-name {
-      margin-left: 8px;
-    }
+    color: #606266;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    &:hover { background: #f5f5f5; }
   }
+  .user-action { padding: 2px 8px 2px 4px; }
+  .user-name { margin-left: 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+.pro-content {
+  background: #f0f2f5;
+  padding: 16px;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.bold { font-weight: 700; }
 </style>
