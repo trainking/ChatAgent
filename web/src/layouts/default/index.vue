@@ -23,6 +23,10 @@
           <el-icon><Setting /></el-icon>
           <span>{{ $t('layout.roles') }}</span>
         </el-menu-item>
+        <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/system">
+          <el-icon><Tools /></el-icon>
+          <span>{{ $t('layout.system') }}</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>

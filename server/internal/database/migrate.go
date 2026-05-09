@@ -71,5 +71,27 @@ func Migrate(db *sqlx.DB) error {
 	if _, err := db.Exec(seedPermissions); err != nil {
 		return err
 	}
+	if _, err := db.Exec(totpSchema); err != nil {
+		return err
+	}
 	return nil
 }
+
+const totpSchema = `
+CREATE TABLE IF NOT EXISTS system_config (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_totp (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    secret VARCHAR(100) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO system_config (key, value) VALUES ('2fa_enabled', 'false') ON CONFLICT (key) DO NOTHING;
+INSERT INTO system_config (key, value) VALUES ('2fa_issuer', 'ChatAgent') ON CONFLICT (key) DO NOTHING;
+`

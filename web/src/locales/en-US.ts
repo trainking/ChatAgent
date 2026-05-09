@@ -58,6 +58,7 @@ export default {
     inbox: 'Inbox',
     users: 'Accounts',
     roles: 'Roles',
+    system: 'Settings',
     changePassword: 'Change Password',
     logout: 'Sign Out',
   },
@@ -108,5 +109,17 @@ export default {
   roles: {
     title: 'Role Management',
     saveSuccess: 'Permissions saved',
+  },
+  system: {
+    title: 'System Settings',
+    twofa: 'Two-Factor Authentication',
+    twofaEnable: 'Enable 2FA',
+    twofaIssuer: 'Issuer Name',
+  },
+  twofa: {
+    enterCode: 'Enter verification code',
+    setupTitle: 'Set Up Two-Factor Authentication',
+    setupDesc: 'Scan the QR code with Google Authenticator or a similar app',
+    manualKey: 'Manual key',
   },
 }

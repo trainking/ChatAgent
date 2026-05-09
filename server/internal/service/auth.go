@@ -86,7 +86,7 @@ func (s *AuthService) InitRoot(email, password, name string) (*model.User, strin
 		return nil, "", err
 	}
 
-	token, err := s.generateToken(user)
+	token, err := s.GenerateToken(user)
 	if err != nil {
 		return nil, "", err
 	}
@@ -114,7 +114,7 @@ func (s *AuthService) Login(email, password string) (*model.User, string, error)
 		return nil, "", ErrWrongPassword
 	}
 
-	token, err := s.generateToken(user)
+	token, err := s.GenerateToken(user)
 	if err != nil {
 		return nil, "", err
 	}
@@ -163,7 +163,7 @@ func (s *AuthService) ValidateToken(tokenString string) (interface{}, error) {
 	return claims, nil
 }
 
-func (s *AuthService) generateToken(user *model.User) (string, error) {
+func (s *AuthService) GenerateToken(user *model.User) (string, error) {
 	claims := &Claims{
 		UserID: user.ID,
 		Email:  user.Email,

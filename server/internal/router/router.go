@@ -26,12 +26,17 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 
 	userRepo := repository.NewUserRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
+	sysCfgRepo := repository.NewSystemConfigRepository(db)
+	totpRepo := repository.NewUserTOTPRepository(db)
 
 	authSvc := service.NewAuthService(userRepo, cfg)
+	twoFASvc := service.NewTwoFactorService(totpRepo, sysCfgRepo, cfg.JWT.Secret)
 
-	authHandler := handler.NewAuthHandler(authSvc)
+	authHandler := handler.NewAuthHandler(authSvc, twoFASvc)
 	userHandler := handler.NewUserHandler(userRepo)
 	permHandler := handler.NewPermissionHandler(permRepo)
+	sysHandler := handler.NewSystemHandler(twoFASvc)
+	twoFAHandler := handler.NewTwoFactorHandler(twoFASvc, authSvc)
 
 	v1 := r.Group("/api/v1")
 	{
@@ -39,12 +44,11 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 			c.JSON(200, gin.H{"message": "pong"})
 		})
 
-		// Public auth routes
 		v1.GET("/auth/status", authHandler.Status)
 		v1.POST("/auth/init", authHandler.InitRoot)
 		v1.POST("/auth/login", authHandler.Login)
+		v1.POST("/auth/2fa/verify", twoFAHandler.VerifyLogin)
 
-		// Authenticated routes
 		protected := v1.Group("")
 		protected.Use(middleware.Auth(authSvc.ValidateToken))
 		{
@@ -52,8 +56,10 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				c.JSON(200, gin.H{"message": "authenticated"})
 			})
 			protected.POST("/auth/change-password", authHandler.ChangePassword)
+			protected.GET("/auth/2fa/status", twoFAHandler.GetStatus)
+			protected.POST("/auth/2fa/setup", twoFAHandler.Setup)
+			protected.POST("/auth/2fa/verify-setup", twoFAHandler.VerifySetup)
 
-			// Admin routes
 			admin := protected.Group("/users")
 			admin.Use(middleware.RequireAdmin())
 			{
@@ -64,7 +70,6 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				admin.PUT("/:id/reset-password", userHandler.ResetPassword)
 			}
 
-			// Super admin only: role/permission management
 			sa := protected.Group("/roles")
 			sa.Use(middleware.RequireSuperAdmin())
 			{
@@ -72,6 +77,13 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				sa.PUT("/:role/permissions", permHandler.SetRolePermissions)
 			}
 			protected.GET("/permissions", permHandler.ListAll)
+
+			system := protected.Group("/system")
+			system.Use(middleware.RequireSuperAdmin())
+			{
+				system.GET("/2fa/config", sysHandler.Get2FAConfig)
+				system.PUT("/2fa/config", sysHandler.Set2FAConfig)
+			}
 		}
 	}
 

@@ -58,6 +58,7 @@ export default {
     inbox: '收件箱',
     users: '账号管理',
     roles: '角色管理',
+    system: '系统配置',
     changePassword: '修改密码',
     logout: '退出登录',
   },
@@ -108,5 +109,17 @@ export default {
   roles: {
     title: '角色管理',
     saveSuccess: '权限已保存',
+  },
+  system: {
+    title: '系统配置',
+    twofa: '两步验证 (2FA)',
+    twofaEnable: '启用 2FA',
+    twofaIssuer: '发卡方名称',
+  },
+  twofa: {
+    enterCode: '请输入动态验证码',
+    setupTitle: '设置两步验证',
+    setupDesc: '请使用 Google Authenticator 或类似应用扫描以下二维码',
+    manualKey: '手动密钥',
   },
 }

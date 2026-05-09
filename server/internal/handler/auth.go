@@ -8,11 +8,12 @@ import (
 )
 
 type AuthHandler struct {
-	svc *service.AuthService
+	svc     *service.AuthService
+	twoFA   *service.TwoFactorService
 }
 
-func NewAuthHandler(svc *service.AuthService) *AuthHandler {
-	return &AuthHandler{svc: svc}
+func NewAuthHandler(svc *service.AuthService, twoFA *service.TwoFactorService) *AuthHandler {
+	return &AuthHandler{svc: svc, twoFA: twoFA}
 }
 
 type loginReq struct {
@@ -57,10 +58,7 @@ func (h *AuthHandler) InitRoot(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, gin.H{
-		"token": token,
-		"user":  user,
-	})
+	response.Success(c, gin.H{"token": token, "user": user})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -70,7 +68,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, token, err := h.svc.Login(req.Email, req.Password)
+	user, _, err := h.svc.Login(req.Email, req.Password)
 	if err != nil {
 		switch err {
 		case service.ErrUserNotFound:
@@ -85,10 +83,35 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, gin.H{
-		"token": token,
-		"user":  user,
-	})
+	twoFAEnabled, _ := h.twoFA.IsEnabled()
+	if twoFAEnabled {
+		has2FA := h.twoFA.HasEnabled2FA(user.ID)
+		tempToken, err := h.twoFA.GenerateTempToken(user)
+		if err != nil {
+			response.Error(c, errcode.ServerError)
+			return
+		}
+		if has2FA {
+			response.Success(c, gin.H{
+				"require_2fa": true,
+				"temp_token":  tempToken,
+			})
+			return
+		}
+		response.Success(c, gin.H{
+			"require_2fa_setup": true,
+			"temp_token":        tempToken,
+		})
+		return
+	}
+
+	token, err := h.svc.GenerateToken(user)
+	if err != nil {
+		response.Error(c, errcode.ServerError)
+		return
+	}
+
+	response.Success(c, gin.H{"token": token, "user": user})
 }
 
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
@@ -119,10 +142,4 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	response.Success(c, nil)
-}
-
-func middleware_claims(c *gin.Context) *service.Claims {
-	v, _ := c.Get("user_claims")
-	claims, _ := v.(*service.Claims)
-	return claims
 }

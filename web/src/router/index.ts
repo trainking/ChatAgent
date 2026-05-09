@@ -18,6 +18,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/login/index.vue'),
   },
   {
+    path: '/setup-2fa',
+    name: 'Setup2FA',
+    component: () => import('@/pages/setup-2fa/index.vue'),
+  },
+  {
     path: '/change-password',
     name: 'ChangePassword',
     component: () => import('@/pages/change-password/index.vue'),
@@ -43,6 +48,11 @@ const routes: RouteRecordRaw[] = [
         name: 'Roles',
         component: () => import('@/pages/roles/index.vue'),
       },
+      {
+        path: 'system',
+        name: 'System',
+        component: () => import('@/pages/system/index.vue'),
+      },
     ],
   },
 ]
@@ -56,7 +66,7 @@ let statusChecked = false
 let systemInitialized = false
 
 router.beforeEach(async (to, _from, next) => {
-  if (to.path === '/init') {
+  if (to.path === '/init' || to.path === '/setup-2fa') {
     next()
     return
   }

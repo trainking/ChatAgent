@@ -12,6 +12,7 @@ interface User {
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
+  const tempToken = ref(localStorage.getItem('temp_token') || '')
   const user = ref<User | null>(JSON.parse(localStorage.getItem('user') || 'null'))
 
   function setAuth(t: string, u: User) {
@@ -19,6 +20,12 @@ export const useUserStore = defineStore('user', () => {
     user.value = u
     localStorage.setItem('token', t)
     localStorage.setItem('user', JSON.stringify(u))
+    localStorage.removeItem('temp_token')
+  }
+
+  function setTempAuth(t: string) {
+    tempToken.value = t
+    localStorage.setItem('temp_token', t)
   }
 
   function clearAuth() {
@@ -47,5 +54,5 @@ export const useUserStore = defineStore('user', () => {
     return user.value?.role === 'super_admin'
   }
 
-  return { token, user, setAuth, clearAuth, markPasswordChanged, isLoggedIn, isAdmin, isSuperAdmin }
+  return { token, tempToken, user, setAuth, setTempAuth, clearAuth, markPasswordChanged, isLoggedIn, isAdmin, isSuperAdmin }
 })
