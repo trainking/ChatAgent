@@ -1,0 +1,196 @@
+---
+- name: Deploy ChatAgent to gmc-server
+  hosts: gmc-server
+  remote_user: root
+  vars:
+    project_dir: /opt/chatagent
+    deploy_dir: /opt/chatagent/deploy
+
+  tasks:
+    - name: Check if Docker already installed
+      shell: docker --version
+      register: docker_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install required system packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+      when: docker_check.rc != 0
+
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: docker_check.rc != 0
+
+    - name: Add Docker GPG key (Aliyun)
+      shell:
+        cmd: |
+          curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+        creates: /etc/apt/keyrings/docker.gpg
+      when: docker_check.rc != 0
+
+    - name: Add Docker repository (Aliyun)
+      shell:
+        cmd: |
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+        creates: /etc/apt/sources.list.d/docker.list
+      when: docker_check.rc != 0
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+      when: docker_check.rc != 0
+
+    - name: Configure Docker registry mirrors
+      copy:
+        content: |
+          {
+            "registry-mirrors": [
+              "https://docker.1ms.run",
+              "https://docker.xuanyuan.me"
+            ]
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+      notify: restart docker
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Flush handlers to apply Docker config
+      meta: flush_handlers
+
+    - name: Verify registry mirrors are active
+      shell: docker info 2>&1 | grep -A5 "Registry Mirrors"
+      register: mirror_check
+      changed_when: false
+
+    - name: Show active mirrors
+      debug:
+        var: mirror_check.stdout
+
+    - name: Create project directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ project_dir }}"
+        - "{{ deploy_dir }}"
+
+    - name: Copy server source
+      synchronize:
+        src: /mnt/d/trainking/chatagent/ChatAgent/server/
+        dest: "{{ project_dir }}/server/"
+        rsync_opts:
+          - "--exclude=bin/"
+          - "--exclude=.git/"
+
+    - name: Copy web source
+      synchronize:
+        src: /mnt/d/trainking/chatagent/ChatAgent/web/
+        dest: "{{ project_dir }}/web/"
+        rsync_opts:
+          - "--exclude=node_modules/"
+          - "--exclude=.git/"
+
+    - name: Copy deploy compose file
+      copy:
+        src: /mnt/d/trainking/chatagent/ChatAgent/deploy/docker-compose.yml
+        dest: "{{ deploy_dir }}/docker-compose.yml"
+
+    - name: Build server image
+      shell:
+        cmd: docker compose build server 2>&1
+        chdir: "{{ deploy_dir }}"
+      register: server_build
+      async: 900
+      poll: 15
+
+    - name: Build web image
+      shell:
+        cmd: docker compose build web 2>&1
+        chdir: "{{ deploy_dir }}"
+      register: web_build
+      async: 900
+      poll: 15
+
+    - name: Start all services
+      shell:
+        cmd: docker compose up -d
+        chdir: "{{ deploy_dir }}"
+      register: compose_up
+
+    - name: Install nginx if not present
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Deploy nginx config for ChatAgent
+      template:
+        src: /mnt/d/trainking/chatagent/ChatAgent/ansible/templates/chatagent.conf.j2
+        dest: /etc/nginx/conf.d/chatagent.conf
+        mode: '0644'
+      notify: reload nginx
+
+    - name: Remove default nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: reload nginx
+
+    - name: Flush nginx handlers
+      meta: flush_handlers
+
+    - name: Wait for services to be ready
+      wait_for:
+        port: "{{ item }}"
+        timeout: 300
+      loop:
+        - 80
+        - 8080
+
+    - name: Verify API through nginx
+      uri:
+        url: http://localhost/api/v1/ping
+        return_content: yes
+      register: api_check
+      retries: 10
+      delay: 3
+      until: api_check.status == 200
+
+    - name: Show API check result
+      debug:
+        var: api_check.json
+
+  handlers:
+    - name: restart docker
+      systemd:
+        name: docker
+        state: restarted
+        daemon_reload: yes
+
+    - name: reload nginx
+      systemd:
+        name: nginx
+        state: reloaded
