@@ -168,7 +168,7 @@
         timeout: 300
       loop:
         - 80
-        - 8080
+        - 8081
 
     - name: Verify API through nginx
       uri:

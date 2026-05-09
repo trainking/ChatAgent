@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { getStatus } from '@/api/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -7,9 +8,19 @@ const routes: RouteRecordRaw[] = [
     redirect: '/dashboard',
   },
   {
+    path: '/init',
+    name: 'Init',
+    component: () => import('@/pages/init/index.vue'),
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/pages/login/index.vue'),
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: () => import('@/pages/change-password/index.vue'),
   },
   {
     path: '/dashboard',
@@ -22,6 +33,16 @@ const routes: RouteRecordRaw[] = [
         name: 'Inbox',
         component: () => import('@/pages/inbox/index.vue'),
       },
+      {
+        path: 'users',
+        name: 'Users',
+        component: () => import('@/pages/users/index.vue'),
+      },
+      {
+        path: 'roles',
+        name: 'Roles',
+        component: () => import('@/pages/roles/index.vue'),
+      },
     ],
   },
 ]
@@ -29,6 +50,61 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+let statusChecked = false
+let systemInitialized = false
+
+router.beforeEach(async (to, _from, next) => {
+  if (to.path === '/init') {
+    next()
+    return
+  }
+
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    if (!statusChecked) {
+      try {
+        const res = await getStatus()
+        systemInitialized = res.data.initialized
+        statusChecked = true
+      } catch {
+        systemInitialized = false
+      }
+    }
+
+    if (!systemInitialized) {
+      next('/init')
+      return
+    }
+
+    if (to.path === '/login') {
+      next()
+      return
+    }
+
+    next('/login')
+    return
+  }
+
+  if (to.path === '/login' || to.path === '/init') {
+    next('/dashboard')
+    return
+  }
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  if (user.must_change_password && to.path !== '/change-password') {
+    next('/change-password')
+    return
+  }
+
+  if (!user.must_change_password && to.path === '/change-password') {
+    next('/dashboard')
+    return
+  }
+
+  next()
 })
 
 export default router

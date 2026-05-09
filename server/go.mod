@@ -5,10 +5,12 @@ go 1.17
 require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.10.1
 	go.uber.org/zap v1.21.0
+	golang.org/x/crypto v0.48.0
 )
 
 replace (
@@ -54,7 +56,6 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect

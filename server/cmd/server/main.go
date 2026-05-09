@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/chatagent/server/config"
+	"github.com/chatagent/server/internal/database"
 	"github.com/chatagent/server/internal/router"
 	"github.com/chatagent/server/pkg/logger"
 	"go.uber.org/zap"
@@ -26,7 +27,21 @@ func main() {
 		zap.Int("port", cfg.Server.Port),
 	)
 
-	r := router.Setup(cfg)
+	// Connect to database
+	db, err := database.NewPostgres(cfg.DB)
+	if err != nil {
+		logger.Fatal("failed to connect to postgres", zap.Error(err))
+	}
+	defer db.Close()
+	logger.Info("postgres connected")
+
+	// Run migrations
+	if err := database.Migrate(db); err != nil {
+		logger.Fatal("failed to run migrations", zap.Error(err))
+	}
+	logger.Info("database migrated")
+
+	r := router.Setup(cfg, db)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
