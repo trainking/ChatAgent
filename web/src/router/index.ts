@@ -44,14 +44,21 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/users/index.vue'),
       },
       {
-        path: 'roles',
-        name: 'Roles',
-        component: () => import('@/pages/roles/index.vue'),
-      },
-      {
         path: 'system',
         name: 'System',
-        component: () => import('@/pages/system/index.vue'),
+        redirect: '/dashboard/system/2fa',
+        children: [
+          {
+            path: 'roles',
+            name: 'Roles',
+            component: () => import('@/pages/roles/index.vue'),
+          },
+          {
+            path: '2fa',
+            name: 'System2FA',
+            component: () => import('@/pages/system/index.vue'),
+          },
+        ],
       },
     ],
   },

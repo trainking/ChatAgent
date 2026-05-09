@@ -59,6 +59,7 @@ export default {
     users: '账号管理',
     roles: '角色管理',
     system: '系统配置',
+    twofa: '2FA 配置',
     changePassword: '修改密码',
     logout: '退出登录',
   },

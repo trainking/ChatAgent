@@ -59,6 +59,7 @@ export default {
     users: 'Accounts',
     roles: 'Roles',
     system: 'Settings',
+    twofa: '2FA Config',
     changePassword: 'Change Password',
     logout: 'Sign Out',
   },

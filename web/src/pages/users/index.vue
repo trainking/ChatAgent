@@ -4,111 +4,286 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('users.title') }}</span>
-          <el-button type="primary" size="small" @click="showCreate = true">{{ $t('users.createBtn') }}</el-button>
+          <el-button
+            type="primary"
+            size="small"
+            @click="showCreate = true"
+          >
+            {{ $t('users.createBtn') }}
+          </el-button>
         </div>
       </template>
-      <el-table :data="users" stripe style="width: 100%" v-loading="loading">
-        <el-table-column prop="name" :label="$t('users.name')" />
-        <el-table-column prop="email" :label="$t('users.email')" />
-        <el-table-column prop="role" :label="$t('users.role')">
+      <el-table
+        v-loading="loading"
+        :data="users"
+        stripe
+        style="width: 100%"
+      >
+        <el-table-column
+          prop="name"
+          :label="$t('users.name')"
+        />
+        <el-table-column
+          prop="email"
+          :label="$t('users.email')"
+        />
+        <el-table-column
+          prop="role"
+          :label="$t('users.role')"
+        >
           <template #default="{ row }">
-            <el-tag v-if="row.role === 'super_admin'" type="danger" size="small">{{ $t('users.roleSuperAdmin') }}</el-tag>
-            <el-tag v-else-if="row.role === 'admin'" type="warning" size="small">{{ $t('users.roleAdmin') }}</el-tag>
-            <el-tag v-else type="primary" size="small">{{ $t('users.roleAgent') }}</el-tag>
+            <el-tag
+              v-if="row.role === 'super_admin'"
+              type="danger"
+              size="small"
+            >
+              {{ $t('users.roleSuperAdmin') }}
+            </el-tag>
+            <el-tag
+              v-else-if="row.role === 'admin'"
+              type="warning"
+              size="small"
+            >
+              {{ $t('users.roleAdmin') }}
+            </el-tag>
+            <el-tag
+              v-else
+              type="primary"
+              size="small"
+            >
+              {{ $t('users.roleAgent') }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" :label="$t('users.status')">
+        <el-table-column
+          prop="status"
+          :label="$t('users.status')"
+        >
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+            <el-tag
+              :type="row.status === 'active' ? 'success' : 'info'"
+              size="small"
+            >
               {{ row.status === 'active' ? $t('users.statusActive') : $t('users.statusDisabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="must_change_password" :label="$t('users.passwordStatus')" width="120">
+        <el-table-column
+          prop="must_change_password"
+          :label="$t('users.passwordStatus')"
+          width="120"
+        >
           <template #default="{ row }">
-            <el-tag :type="row.must_change_password ? 'warning' : 'success'" size="small">
+            <el-tag
+              :type="row.must_change_password ? 'warning' : 'success'"
+              size="small"
+            >
               {{ row.must_change_password ? $t('users.pwdNeedChange') : $t('users.pwdSet') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" :label="$t('users.createdAt')" width="170">
-          <template #default="{ row }">{{ new Date(row.created_at).toLocaleString(locale === 'zh-CN' ? 'zh-CN' : 'en-US') }}</template>
-        </el-table-column>
-        <el-table-column :label="$t('users.actions')" width="240">
+        <el-table-column
+          prop="created_at"
+          :label="$t('users.createdAt')"
+          width="170"
+        >
           <template #default="{ row }">
-            <el-button size="small" @click="editUser(row)">{{ $t('users.editBtn') }}</el-button>
-            <el-button v-if="userStore.isSuperAdmin()" size="small" type="warning" @click="handleReset(row)">
+            {{ new Date(row.created_at).toLocaleString(locale === 'zh-CN' ? 'zh-CN' : 'en-US') }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="$t('users.actions')"
+          width="240"
+        >
+          <template #default="{ row }">
+            <el-button
+              size="small"
+              @click="editUser(row)"
+            >
+              {{ $t('users.editBtn') }}
+            </el-button>
+            <el-button
+              v-if="userStore.isSuperAdmin()"
+              size="small"
+              type="warning"
+              @click="handleReset(row)"
+            >
               {{ $t('users.resetPwd') }}
             </el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">{{ $t('users.deleteBtn') }}</el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="handleDelete(row)"
+            >
+              {{ $t('users.deleteBtn') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showCreate" :title="$t('users.createTitle')" width="460px">
-      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="80px">
-        <el-form-item :label="$t('users.createEmail')" prop="email">
+    <el-dialog
+      v-model="showCreate"
+      :title="$t('users.createTitle')"
+      width="460px"
+    >
+      <el-form
+        ref="createFormRef"
+        :model="createForm"
+        :rules="createRules"
+        label-width="80px"
+      >
+        <el-form-item
+          :label="$t('users.createEmail')"
+          prop="email"
+        >
           <el-input v-model="createForm.email" />
         </el-form-item>
-        <el-form-item :label="$t('users.createName')" prop="name">
+        <el-form-item
+          :label="$t('users.createName')"
+          prop="name"
+        >
           <el-input v-model="createForm.name" />
         </el-form-item>
-        <el-form-item :label="$t('users.createPassword')" prop="password">
-          <el-input v-model="createForm.password" type="password" show-password />
+        <el-form-item
+          :label="$t('users.createPassword')"
+          prop="password"
+        >
+          <el-input
+            v-model="createForm.password"
+            type="password"
+            show-password
+          />
         </el-form-item>
-        <el-form-item :label="$t('users.createRole')" prop="role">
-          <el-select v-model="createForm.role" style="width: 100%">
-            <el-option :label="$t('users.roleAgent')" value="agent" />
-            <el-option :label="$t('users.roleAdmin')" value="admin" />
+        <el-form-item
+          :label="$t('users.createRole')"
+          prop="role"
+        >
+          <el-select
+            v-model="createForm.role"
+            style="width: 100%"
+          >
+            <el-option
+              :label="$t('users.roleAgent')"
+              value="agent"
+            />
+            <el-option
+              :label="$t('users.roleAdmin')"
+              value="admin"
+            />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreate = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" :loading="creating" @click="handleCreate">{{ $t('common.create') }}</el-button>
+        <el-button @click="showCreate = false">
+          {{ $t('common.cancel') }}
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="creating"
+          @click="handleCreate"
+        >
+          {{ $t('common.create') }}
+        </el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showEdit" :title="$t('users.editTitle')" width="460px">
-      <el-form :model="editForm" label-width="80px">
+    <el-dialog
+      v-model="showEdit"
+      :title="$t('users.editTitle')"
+      width="460px"
+    >
+      <el-form
+        :model="editForm"
+        label-width="80px"
+      >
         <el-form-item :label="$t('users.name')">
           <el-input v-model="editForm.name" />
         </el-form-item>
         <el-form-item :label="$t('users.role')">
-          <el-select v-model="editForm.role" style="width: 100%">
-            <el-option :label="$t('users.roleAgent')" value="agent" />
-            <el-option :label="$t('users.roleAdmin')" value="admin" />
+          <el-select
+            v-model="editForm.role"
+            style="width: 100%"
+          >
+            <el-option
+              :label="$t('users.roleAgent')"
+              value="agent"
+            />
+            <el-option
+              :label="$t('users.roleAdmin')"
+              value="admin"
+            />
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('users.status')">
-          <el-select v-model="editForm.status" style="width: 100%">
-            <el-option :label="$t('users.statusActive')" value="active" />
-            <el-option :label="$t('users.statusDisabled')" value="disabled" />
+          <el-select
+            v-model="editForm.status"
+            style="width: 100%"
+          >
+            <el-option
+              :label="$t('users.statusActive')"
+              value="active"
+            />
+            <el-option
+              :label="$t('users.statusDisabled')"
+              value="disabled"
+            />
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('users.passwordStatus')">
-          <el-switch v-model="editForm.must_change_password" :active-text="$t('users.pwdNeedChange')" :inactive-text="$t('users.pwdSet')" />
+          <el-switch
+            v-model="editForm.must_change_password"
+            :active-text="$t('users.pwdNeedChange')"
+            :inactive-text="$t('users.pwdSet')"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showEdit = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" :loading="saving" @click="handleUpdate">{{ $t('common.save') }}</el-button>
+        <el-button @click="showEdit = false">
+          {{ $t('common.cancel') }}
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="handleUpdate"
+        >
+          {{ $t('common.save') }}
+        </el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showReset" :title="$t('users.resetTitle')" width="400px">
+    <el-dialog
+      v-model="showReset"
+      :title="$t('users.resetTitle')"
+      width="400px"
+    >
       <div style="text-align: center; padding: 20px 0">
-        <p style="margin-bottom: 12px; color: #909399">{{ $t('users.resetDesc') }}</p>
-        <el-input :model-value="resetPasswordStr" readonly size="large" style="text-align: center; font-size: 20px; letter-spacing: 4px">
+        <p style="margin-bottom: 12px; color: #909399">
+          {{ $t('users.resetDesc') }}
+        </p>
+        <el-input
+          :model-value="resetPasswordStr"
+          readonly
+          size="large"
+          style="text-align: center; font-size: 20px; letter-spacing: 4px"
+        >
           <template #append>
-            <el-button @click="copyPassword"><el-icon><CopyDocument /></el-icon></el-button>
+            <el-button @click="copyPassword">
+              <el-icon><CopyDocument /></el-icon>
+            </el-button>
           </template>
         </el-input>
-        <p style="margin-top: 12px; color: #e6a23c; font-size: 13px">{{ $t('users.resetWarning') }}</p>
+        <p style="margin-top: 12px; color: #e6a23c; font-size: 13px">
+          {{ $t('users.resetWarning') }}
+        </p>
       </div>
       <template #footer>
-        <el-button type="primary" @click="showReset = false">{{ $t('common.close') }}</el-button>
+        <el-button
+          type="primary"
+          @click="showReset = false"
+        >
+          {{ $t('common.close') }}
+        </el-button>
       </template>
     </el-dialog>
   </div>

@@ -1,10 +1,21 @@
 <template>
   <el-container class="pro-layout">
     <!-- Sidebar -->
-    <el-aside :width="collapsed ? '64px' : '220px'" class="pro-sider">
-      <div class="pro-logo" :class="{ collapsed }">
-        <el-icon :size="24"><ChatDotRound /></el-icon>
-        <span v-show="!collapsed" class="logo-text">ChatAgent</span>
+    <el-aside
+      :width="collapsed ? '64px' : '220px'"
+      class="pro-sider"
+    >
+      <div
+        class="pro-logo"
+        :class="{ collapsed }"
+      >
+        <el-icon :size="24">
+          <ChatDotRound />
+        </el-icon>
+        <span
+          v-show="!collapsed"
+          class="logo-text"
+        >ChatAgent</span>
       </div>
 
       <el-scrollbar>
@@ -19,20 +30,34 @@
         >
           <el-menu-item index="/dashboard/inbox">
             <el-icon><ChatDotRound /></el-icon>
-            <template #title>{{ $t('layout.inbox') }}</template>
+            <template #title>
+              {{ $t('layout.inbox') }}
+            </template>
           </el-menu-item>
-          <el-menu-item v-if="userStore.isAdmin()" index="/dashboard/users">
+          <el-menu-item
+            v-if="userStore.isAdmin()"
+            index="/dashboard/users"
+          >
             <el-icon><UserFilled /></el-icon>
-            <template #title>{{ $t('layout.users') }}</template>
+            <template #title>
+              {{ $t('layout.users') }}
+            </template>
           </el-menu-item>
-          <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/roles">
-            <el-icon><Setting /></el-icon>
-            <template #title>{{ $t('layout.roles') }}</template>
-          </el-menu-item>
-          <el-menu-item v-if="userStore.isSuperAdmin()" index="/dashboard/system">
-            <el-icon><Tools /></el-icon>
-            <template #title>{{ $t('layout.system') }}</template>
-          </el-menu-item>
+          <el-sub-menu
+            v-if="userStore.isSuperAdmin()"
+            index="/dashboard/system"
+          >
+            <template #title>
+              <el-icon><Tools /></el-icon>
+              <span>{{ $t('layout.system') }}</span>
+            </template>
+            <el-menu-item index="/dashboard/system/roles">
+              <span>{{ $t('layout.roles') }}</span>
+            </el-menu-item>
+            <el-menu-item index="/dashboard/system/2fa">
+              <span>{{ $t('layout.twofa') }}</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -42,11 +67,17 @@
       <!-- Header -->
       <el-header class="pro-header">
         <div class="header-left">
-          <el-icon class="collapse-btn" :size="20" @click="collapsed = !collapsed">
+          <el-icon
+            class="collapse-btn"
+            :size="20"
+            @click="collapsed = !collapsed"
+          >
             <Fold v-if="!collapsed" /><Expand v-else />
           </el-icon>
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/' }">Home</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/' }">
+              Home
+            </el-breadcrumb-item>
             <el-breadcrumb-item v-if="route.matched.length > 1">
               {{ breadcrumbTitle }}
             </el-breadcrumb-item>
@@ -72,7 +103,10 @@
 
           <el-dropdown>
             <span class="action-item user-action">
-              <el-avatar :size="28" icon="UserFilled" />
+              <el-avatar
+                :size="28"
+                icon="UserFilled"
+              />
               <span class="user-name">{{ userStore.user?.name || 'User' }}</span>
             </span>
             <template #dropdown>
@@ -80,7 +114,10 @@
                 <el-dropdown-item @click="showPwdDialog = true">
                   <el-icon><Key /></el-icon>{{ $t('layout.changePassword') }}
                 </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
+                <el-dropdown-item
+                  divided
+                  @click="handleLogout"
+                >
                   <el-icon><SwitchButton /></el-icon>{{ $t('layout.logout') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -96,21 +133,54 @@
     </el-container>
 
     <!-- Password Dialog -->
-    <el-dialog v-model="showPwdDialog" :title="$t('changePassword.title')" width="420px" :close-on-click-modal="false">
-      <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="0">
+    <el-dialog
+      v-model="showPwdDialog"
+      :title="$t('changePassword.title')"
+      width="420px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="pwdFormRef"
+        :model="pwdForm"
+        :rules="pwdRules"
+        label-width="0"
+      >
         <el-form-item prop="old_password">
-          <el-input v-model="pwdForm.old_password" type="password" :placeholder="$t('changePassword.oldPassword')" show-password />
+          <el-input
+            v-model="pwdForm.old_password"
+            type="password"
+            :placeholder="$t('changePassword.oldPassword')"
+            show-password
+          />
         </el-form-item>
         <el-form-item prop="new_password">
-          <el-input v-model="pwdForm.new_password" type="password" :placeholder="$t('changePassword.newPassword')" show-password />
+          <el-input
+            v-model="pwdForm.new_password"
+            type="password"
+            :placeholder="$t('changePassword.newPassword')"
+            show-password
+          />
         </el-form-item>
         <el-form-item prop="confirm_password">
-          <el-input v-model="pwdForm.confirm_password" type="password" :placeholder="$t('changePassword.confirmPassword')" show-password />
+          <el-input
+            v-model="pwdForm.confirm_password"
+            type="password"
+            :placeholder="$t('changePassword.confirmPassword')"
+            show-password
+          />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showPwdDialog = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" :loading="pwdLoading" @click="handlePwdSubmit">{{ $t('changePassword.submit') }}</el-button>
+        <el-button @click="showPwdDialog = false">
+          {{ $t('common.cancel') }}
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="pwdLoading"
+          @click="handlePwdSubmit"
+        >
+          {{ $t('changePassword.submit') }}
+        </el-button>
       </template>
     </el-dialog>
   </el-container>

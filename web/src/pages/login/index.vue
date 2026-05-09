@@ -1,22 +1,47 @@
 <template>
   <div class="login-wrapper">
     <el-card class="login-card">
-      <h2 class="login-title">{{ $t('login.title') }}</h2>
+      <h2 class="login-title">
+        {{ $t('login.title') }}
+      </h2>
 
       <template v-if="step === 'password'">
-        <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="handleLogin">
+        <el-form
+          ref="formRef"
+          :model="form"
+          :rules="rules"
+          size="large"
+          @keyup.enter="handleLogin"
+        >
           <el-form-item prop="email">
-            <el-input v-model="form.email" :placeholder="$t('login.email')">
-              <template #prefix><el-icon><User /></el-icon></template>
+            <el-input
+              v-model="form.email"
+              :placeholder="$t('login.email')"
+            >
+              <template #prefix>
+                <el-icon><User /></el-icon>
+              </template>
             </el-input>
           </el-form-item>
           <el-form-item prop="password">
-            <el-input v-model="form.password" type="password" :placeholder="$t('login.password')" show-password>
-              <template #prefix><el-icon><Lock /></el-icon></template>
+            <el-input
+              v-model="form.password"
+              type="password"
+              :placeholder="$t('login.password')"
+              show-password
+            >
+              <template #prefix>
+                <el-icon><Lock /></el-icon>
+              </template>
             </el-input>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :loading="loading" style="width: 100%" @click="handleLogin">
+            <el-button
+              type="primary"
+              :loading="loading"
+              style="width: 100%"
+              @click="handleLogin"
+            >
               {{ $t('login.loginBtn') }}
             </el-button>
           </el-form-item>
@@ -24,14 +49,29 @@
       </template>
 
       <template v-if="step === '2fa'">
-        <p class="twofa-desc">{{ $t('twofa.enterCode') }}</p>
-        <el-input v-model="totpCode" placeholder="000000" maxlength="6" size="large"
+        <p class="twofa-desc">
+          {{ $t('twofa.enterCode') }}
+        </p>
+        <el-input
+          v-model="totpCode"
+          placeholder="000000"
+          maxlength="6"
+          size="large"
           style="text-align: center; font-size: 22px; letter-spacing: 6px"
-          @keyup.enter="handle2FAVerify" />
-        <el-button type="primary" :loading="loading" style="width: 100%; margin-top: 16px" @click="handle2FAVerify">
+          @keyup.enter="handle2FAVerify"
+        />
+        <el-button
+          type="primary"
+          :loading="loading"
+          style="width: 100%; margin-top: 16px"
+          @click="handle2FAVerify"
+        >
           {{ $t('common.submit') }}
         </el-button>
-        <el-button style="width: 100%; margin-top: 8px" @click="step = 'password'">
+        <el-button
+          style="width: 100%; margin-top: 8px"
+          @click="step = 'password'"
+        >
           {{ $t('common.back') }}
         </el-button>
       </template>

@@ -1,23 +1,47 @@
 <template>
   <div class="setup-wrapper">
     <el-card class="setup-card">
-      <h2 class="setup-title">{{ $t('twofa.setupTitle') }}</h2>
-      <p class="setup-desc">{{ $t('twofa.setupDesc') }}</p>
+      <h2 class="setup-title">
+        {{ $t('twofa.setupTitle') }}
+      </h2>
+      <p class="setup-desc">
+        {{ $t('twofa.setupDesc') }}
+      </p>
 
-      <div v-if="qrUrl" class="qr-section">
-        <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`"
-          alt="QR Code" class="qr-img" />
-        <p class="secret-text">{{ $t('twofa.manualKey') }}: {{ secret }}</p>
+      <div
+        v-if="qrUrl"
+        class="qr-section"
+      >
+        <img
+          :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`"
+          alt="QR Code"
+          class="qr-img"
+        >
+        <p class="secret-text">
+          {{ $t('twofa.manualKey') }}: {{ secret }}
+        </p>
       </div>
 
-      <el-form v-if="qrUrl" size="large">
+      <el-form
+        v-if="qrUrl"
+        size="large"
+      >
         <el-form-item>
-          <el-input v-model="code" :placeholder="$t('twofa.enterCode')" maxlength="6"
+          <el-input
+            v-model="code"
+            :placeholder="$t('twofa.enterCode')"
+            maxlength="6"
             style="text-align: center; font-size: 22px; letter-spacing: 6px"
-            @keyup.enter="handleVerify" />
+            @keyup.enter="handleVerify"
+          />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" style="width: 100%" @click="handleVerify">
+          <el-button
+            type="primary"
+            :loading="loading"
+            style="width: 100%"
+            @click="handleVerify"
+          >
             {{ $t('common.submit') }}
           </el-button>
         </el-form-item>

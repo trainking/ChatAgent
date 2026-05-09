@@ -1,16 +1,27 @@
 <template>
   <div class="system-page">
     <el-card v-loading="loading">
-      <template #header><span>{{ $t('system.title') }}</span></template>
+      <template #header>
+        <span>{{ $t('system.title') }}</span>
+      </template>
 
-      <el-divider content-position="left">{{ $t('system.twofa') }}</el-divider>
+      <el-divider content-position="left">
+        {{ $t('system.twofa') }}
+      </el-divider>
 
       <el-form label-width="140px">
         <el-form-item :label="$t('system.twofaEnable')">
-          <el-switch v-model="config.enabled" @change="handleToggle" />
+          <el-switch
+            v-model="config.enabled"
+            @change="handleToggle"
+          />
         </el-form-item>
         <el-form-item :label="$t('system.twofaIssuer')">
-          <el-input v-model="config.issuer" style="width: 300px" @blur="handleSave" />
+          <el-input
+            v-model="config.issuer"
+            style="width: 300px"
+            @blur="handleSave"
+          />
         </el-form-item>
       </el-form>
     </el-card>

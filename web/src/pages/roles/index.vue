@@ -1,32 +1,56 @@
 <template>
   <div class="roles-page">
     <el-card v-loading="loading">
-      <template #header><span>{{ $t('roles.title') }}</span></template>
+      <template #header>
+        <span>{{ $t('roles.title') }}</span>
+      </template>
 
       <el-tabs v-model="activeRole">
-        <el-tab-pane label="Admin" name="admin">
+        <el-tab-pane
+          label="Admin"
+          name="admin"
+        >
           <template #label>
             <span>{{ $t('users.roleAdmin') }}</span>
           </template>
         </el-tab-pane>
-        <el-tab-pane label="Agent" name="agent">
+        <el-tab-pane
+          label="Agent"
+          name="agent"
+        >
           <template #label>
             <span>{{ $t('users.roleAgent') }}</span>
           </template>
         </el-tab-pane>
       </el-tabs>
 
-      <el-checkbox-group v-model="selected" class="perm-list">
-        <div v-for="p in allPermissions" :key="p.code" class="perm-item">
+      <el-checkbox-group
+        v-model="selected"
+        class="perm-list"
+      >
+        <div
+          v-for="p in allPermissions"
+          :key="p.code"
+          class="perm-item"
+        >
           <el-checkbox :label="p.code">
             <span class="perm-name">{{ locale === 'zh-CN' ? p.name : p.code }}</span>
-            <span class="perm-desc" v-if="locale === 'zh-CN'">{{ p.description }}</span>
+            <span
+              v-if="locale === 'zh-CN'"
+              class="perm-desc"
+            >{{ p.description }}</span>
           </el-checkbox>
         </div>
       </el-checkbox-group>
 
       <div style="margin-top: 24px">
-        <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('common.save') }}</el-button>
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="handleSave"
+        >
+          {{ $t('common.save') }}
+        </el-button>
       </div>
     </el-card>
   </div>

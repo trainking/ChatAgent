@@ -1,26 +1,62 @@
 <template>
   <div class="changepwd-wrapper">
     <el-card class="changepwd-card">
-      <h2 class="changepwd-title">{{ $t('changePassword.title') }}</h2>
-      <p class="changepwd-desc">{{ $t('changePassword.firstLoginDesc') }}</p>
-      <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="handleChange">
+      <h2 class="changepwd-title">
+        {{ $t('changePassword.title') }}
+      </h2>
+      <p class="changepwd-desc">
+        {{ $t('changePassword.firstLoginDesc') }}
+      </p>
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        size="large"
+        @keyup.enter="handleChange"
+      >
         <el-form-item prop="old_password">
-          <el-input v-model="form.old_password" type="password" :placeholder="$t('changePassword.oldPassword')" show-password>
-            <template #prefix><el-icon><Lock /></el-icon></template>
+          <el-input
+            v-model="form.old_password"
+            type="password"
+            :placeholder="$t('changePassword.oldPassword')"
+            show-password
+          >
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="new_password">
-          <el-input v-model="form.new_password" type="password" :placeholder="$t('changePassword.newPassword')" show-password>
-            <template #prefix><el-icon><Key /></el-icon></template>
+          <el-input
+            v-model="form.new_password"
+            type="password"
+            :placeholder="$t('changePassword.newPassword')"
+            show-password
+          >
+            <template #prefix>
+              <el-icon><Key /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="confirm_password">
-          <el-input v-model="form.confirm_password" type="password" :placeholder="$t('changePassword.confirmPassword')" show-password>
-            <template #prefix><el-icon><Key /></el-icon></template>
+          <el-input
+            v-model="form.confirm_password"
+            type="password"
+            :placeholder="$t('changePassword.confirmPassword')"
+            show-password
+          >
+            <template #prefix>
+              <el-icon><Key /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" style="width: 100%" @click="handleChange">
+          <el-button
+            type="primary"
+            :loading="loading"
+            style="width: 100%"
+            @click="handleChange"
+          >
             {{ $t('changePassword.submit') }}
           </el-button>
         </el-form-item>

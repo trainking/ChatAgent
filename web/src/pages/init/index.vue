@@ -1,26 +1,58 @@
 <template>
   <div class="init-wrapper">
     <el-card class="init-card">
-      <h2 class="init-title">{{ $t('init.title') }}</h2>
-      <p class="init-desc">{{ $t('init.desc') }}</p>
-      <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="handleInit">
+      <h2 class="init-title">
+        {{ $t('init.title') }}
+      </h2>
+      <p class="init-desc">
+        {{ $t('init.desc') }}
+      </p>
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        size="large"
+        @keyup.enter="handleInit"
+      >
         <el-form-item prop="email">
-          <el-input v-model="form.email" :placeholder="$t('init.email')">
-            <template #prefix><el-icon><User /></el-icon></template>
+          <el-input
+            v-model="form.email"
+            :placeholder="$t('init.email')"
+          >
+            <template #prefix>
+              <el-icon><User /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="name">
-          <el-input v-model="form.name" :placeholder="$t('init.name')">
-            <template #prefix><el-icon><UserFilled /></el-icon></template>
+          <el-input
+            v-model="form.name"
+            :placeholder="$t('init.name')"
+          >
+            <template #prefix>
+              <el-icon><UserFilled /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="form.password" type="password" :placeholder="$t('init.password')" show-password>
-            <template #prefix><el-icon><Lock /></el-icon></template>
+          <el-input
+            v-model="form.password"
+            type="password"
+            :placeholder="$t('init.password')"
+            show-password
+          >
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" style="width: 100%" @click="handleInit">
+          <el-button
+            type="primary"
+            :loading="loading"
+            style="width: 100%"
+            @click="handleInit"
+          >
             {{ $t('init.submit') }}
           </el-button>
         </el-form-item>
