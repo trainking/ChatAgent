@@ -83,6 +83,9 @@ func Migrate(db *sqlx.DB) error {
 	if _, err := db.Exec(activityLogSchema); err != nil {
 		return err
 	}
+	if _, err := db.Exec(inboxSchema); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -124,4 +127,25 @@ CREATE TABLE IF NOT EXISTS user_totp (
 
 INSERT INTO system_config (key, value) VALUES ('2fa_enabled', 'false') ON CONFLICT (key) DO NOTHING;
 INSERT INTO system_config (key, value) VALUES ('2fa_issuer', 'ChatAgent') ON CONFLICT (key) DO NOTHING;
+`
+
+const inboxSchema = `
+CREATE TABLE IF NOT EXISTS inboxes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT DEFAULT '',
+    welcome_title VARCHAR(32) DEFAULT '',
+    welcome_message TEXT DEFAULT '',
+    inbox_type VARCHAR(20) NOT NULL CHECK (inbox_type IN ('website', 'api')),
+    status VARCHAR(20) NOT NULL DEFAULT 'enabled',
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS inbox_collaborators (
+    inbox_id UUID NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (inbox_id, user_id)
+);
 `

@@ -31,6 +31,7 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 	sysCfgRepo := repository.NewSystemConfigRepository(db)
 	totpRepo := repository.NewUserTOTPRepository(db)
 	actRepo := repository.NewActivityRepository(db)
+	inboxRepo := repository.NewInboxRepository(db)
 
 	authSvc := service.NewAuthService(userRepo, cfg)
 	twoFASvc := service.NewTwoFactorService(totpRepo, sysCfgRepo, cfg.JWT.Secret)
@@ -41,6 +42,7 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 	sysHandler := handler.NewSystemHandler(twoFASvc)
 	twoFAHandler := handler.NewTwoFactorHandler(twoFASvc, authSvc, userRepo, actRepo)
 	profileHandler := handler.NewProfileHandler(userRepo, actRepo)
+	inboxHandler := handler.NewInboxHandler(inboxRepo, userRepo)
 
 	v1 := r.Group("/api/v1")
 	{
@@ -82,6 +84,15 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				sa.PUT("/:role/permissions", permHandler.SetRolePermissions)
 			}
 				protected.GET("/permissions", permHandler.ListAll)
+
+			inboxes := protected.Group("/inboxes")
+			{
+				inboxes.GET("", inboxHandler.List)
+				inboxes.POST("", inboxHandler.Create)
+				inboxes.GET("/:id", inboxHandler.Get)
+				inboxes.PUT("/:id", inboxHandler.Update)
+				inboxes.DELETE("/:id", inboxHandler.Delete)
+			}
 
 			profile := protected.Group("/profile")
 			{
