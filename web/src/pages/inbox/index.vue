@@ -76,7 +76,7 @@
           <template #default="{ row }">
             <el-button
               size="small"
-              @click="openDetail(row)"
+              @click="openDetail(row.id)"
             >
               {{ $t('inbox.detail') }}
             </el-button>
@@ -187,123 +187,17 @@
       </template>
     </el-dialog>
 
-    <!-- Detail/Edit Dialog -->
-    <el-dialog
-      v-model="showDetail"
-      :title="detailInbox?.name"
-      width="680px"
-    >
-      <el-tabs v-model="detailTab">
-        <el-tab-pane
-          :label="$t('inbox.basicInfo')"
-          name="info"
-        >
-          <el-form
-            v-if="detailInbox"
-            ref="editFormRef"
-            :model="editForm"
-            label-width="90px"
-          >
-            <el-form-item :label="$t('inbox.type')">
-              <el-tag
-                :type="detailInbox.inbox_type === 'website' ? 'primary' : 'success'"
-                size="small"
-              >
-                {{ detailInbox.inbox_type === 'website' ? 'Website' : 'API' }}
-              </el-tag>
-            </el-form-item>
-            <el-form-item :label="$t('inbox.name')">
-              <el-input
-                :model-value="detailInbox.name"
-                disabled
-              />
-            </el-form-item>
-            <el-form-item :label="$t('inbox.description')">
-              <el-input
-                v-model="editForm.description"
-                type="textarea"
-                :rows="2"
-                :placeholder="$t('inbox.descriptionPlaceholder')"
-              />
-            </el-form-item>
-            <el-form-item :label="$t('inbox.welcomeTitle')">
-              <el-input
-                v-model="editForm.welcome_title"
-                :placeholder="$t('inbox.welcomeTitlePlaceholder')"
-                maxlength="32"
-                show-word-limit
-              />
-            </el-form-item>
-            <el-form-item :label="$t('inbox.welcomeMessage')">
-              <RichTextEditor
-                v-model="editForm.welcome_message"
-                :maxlength="255"
-              />
-            </el-form-item>
-            <el-form-item :label="$t('inbox.status')">
-              <el-switch
-                v-model="editFormStatusEnabled"
-                :active-text="$t('inbox.enabled')"
-                :inactive-text="$t('inbox.disabled')"
-              />
-            </el-form-item>
-            <el-form-item :label="$t('inbox.collaborators')">
-              <el-select
-                v-model="editForm.collaborators"
-                multiple
-                filterable
-                :placeholder="$t('inbox.collaboratorsPlaceholder')"
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="u in userOptions"
-                  :key="u.id"
-                  :label="u.name + ' (' + u.email + ')'"
-                  :value="u.id"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button
-                type="primary"
-                :loading="saving"
-                @click="handleUpdate"
-              >
-                {{ $t('common.save') }}
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-        <el-tab-pane
-          :label="$t('inbox.accessRef')"
-          name="access"
-        >
-          <el-empty :description="$t('inbox.accessRefPlaceholder')" />
-        </el-tab-pane>
-        <el-tab-pane
-          :label="$t('inbox.forwardRules')"
-          name="rules"
-        >
-          <el-empty :description="$t('inbox.forwardRulesPlaceholder')" />
-        </el-tab-pane>
-      </el-tabs>
-      <template #footer>
-        <el-button @click="showDetail = false">
-          {{ $t('common.close') }}
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { getInboxes, getInbox, createInbox, updateInbox, deleteInbox } from '@/api/inbox'
+import { getInboxes, createInbox, deleteInbox } from '@/api/inbox'
 import { getUsers } from '@/api/auth'
-import { useUserStore } from '@/stores/user'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 
 interface InboxItem {
@@ -323,20 +217,15 @@ interface InboxItem {
 }
 
 const { t, locale } = useI18n()
-const userStore = useUserStore()
+const router = useRouter()
 const loading = ref(false)
 const creating = ref(false)
-const saving = ref(false)
 const inboxes = ref<InboxItem[]>([])
 const userOptions = ref<{ id: string; name: string; email: string }[]>([])
 
 const showCreate = ref(false)
-const showDetail = ref(false)
-const detailTab = ref('info')
-const detailInbox = ref<InboxItem | null>(null)
 
 const createFormRef = ref<FormInstance>()
-const editFormRef = ref<FormInstance>()
 
 const createForm = reactive({
   inbox_type: 'website',
@@ -353,15 +242,6 @@ const createRules: FormRules = {
   inbox_type: [{ required: true, message: 'Type is required', trigger: 'change' }],
   name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
 }
-
-const editForm = reactive({
-  description: '',
-  welcome_title: '',
-  welcome_message: '',
-  collaborators: [] as string[],
-})
-
-const editFormStatusEnabled = ref(true)
 
 onMounted(() => {
   fetchInboxes()
@@ -423,37 +303,8 @@ async function handleCreate() {
   }
 }
 
-async function openDetail(row: InboxItem) {
-  try {
-    const res = await getInbox(row.id)
-    detailInbox.value = res.data
-    editForm.description = res.data.description || ''
-    editForm.welcome_title = res.data.welcome_title || ''
-    editForm.welcome_message = res.data.welcome_message || ''
-    editForm.collaborators = (res.data.collaborators || []).map((c: any) => c.id)
-    editFormStatusEnabled.value = res.data.status === 'enabled'
-    detailTab.value = 'info'
-    showDetail.value = true
-  } catch {}
-}
-
-async function handleUpdate() {
-  if (!detailInbox.value) return
-  saving.value = true
-  try {
-    await updateInbox(detailInbox.value.id, {
-      description: editForm.description,
-      welcome_title: editForm.welcome_title,
-      welcome_message: editForm.welcome_message,
-      status: editFormStatusEnabled.value ? 'enabled' : 'disabled',
-      collaborators: editForm.collaborators,
-    })
-    ElMessage.success(t('common.success'))
-    showDetail.value = false
-    fetchInboxes()
-  } finally {
-    saving.value = false
-  }
+function openDetail(id: string) {
+  router.push('/dashboard/inbox/' + id)
 }
 
 async function handleDelete(row: InboxItem) {

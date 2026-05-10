@@ -39,6 +39,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/inbox/index.vue'),
       },
       {
+        path: 'inbox/:id',
+        name: 'InboxDetail',
+        component: () => import('@/pages/inbox/detail.vue'),
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/pages/profile/index.vue'),
