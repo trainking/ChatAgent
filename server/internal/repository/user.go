@@ -23,7 +23,7 @@ func (r *UserRepository) Create(user *model.User) error {
 func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 	user := &model.User{}
 	query := `SELECT id, email, name, password_hash, role, avatar_url, status, must_change_password,
-		created_at, updated_at FROM users WHERE email = $1`
+		last_login_at, created_at, updated_at FROM users WHERE email = $1`
 	err := r.db.Get(user, query, email)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 func (r *UserRepository) FindByID(id string) (*model.User, error) {
 	user := &model.User{}
 	query := `SELECT id, email, name, password_hash, role, avatar_url, status, must_change_password,
-		created_at, updated_at FROM users WHERE id = $1`
+		last_login_at, created_at, updated_at FROM users WHERE id = $1`
 	err := r.db.Get(user, query, id)
 	if err != nil {
 		return nil, err
@@ -67,12 +67,25 @@ func (r *UserRepository) AdminResetPassword(id, hash string) error {
 func (r *UserRepository) List() ([]model.User, error) {
 	var users []model.User
 	query := `SELECT id, email, name, password_hash, role, avatar_url, status, must_change_password,
-		created_at, updated_at FROM users ORDER BY created_at DESC`
+		last_login_at, created_at, updated_at FROM users ORDER BY created_at DESC`
 	err := r.db.Select(&users, query)
 	if err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *UserRepository) UpdateProfile(id, name, avatarURL string) error {
+	_, err := r.db.Exec(
+		"UPDATE users SET name=$1, avatar_url=$2, updated_at=NOW() WHERE id=$3",
+		name, avatarURL, id,
+	)
+	return err
+}
+
+func (r *UserRepository) UpdateLastLogin(id string) error {
+	_, err := r.db.Exec("UPDATE users SET last_login_at = NOW() WHERE id = $1", id)
+	return err
 }
 
 func (r *UserRepository) Delete(id string) error {

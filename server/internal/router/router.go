@@ -20,6 +20,8 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 	r.Use(middleware.CORS())
 	r.Use(gin.Recovery())
 
+	r.Static("/uploads", "./uploads")
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
@@ -28,15 +30,17 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 	permRepo := repository.NewPermissionRepository(db)
 	sysCfgRepo := repository.NewSystemConfigRepository(db)
 	totpRepo := repository.NewUserTOTPRepository(db)
+	actRepo := repository.NewActivityRepository(db)
 
 	authSvc := service.NewAuthService(userRepo, cfg)
 	twoFASvc := service.NewTwoFactorService(totpRepo, sysCfgRepo, cfg.JWT.Secret)
 
-	authHandler := handler.NewAuthHandler(authSvc, twoFASvc)
+	authHandler := handler.NewAuthHandler(authSvc, twoFASvc, userRepo, actRepo)
 	userHandler := handler.NewUserHandler(userRepo)
 	permHandler := handler.NewPermissionHandler(permRepo)
 	sysHandler := handler.NewSystemHandler(twoFASvc)
-	twoFAHandler := handler.NewTwoFactorHandler(twoFASvc, authSvc)
+	twoFAHandler := handler.NewTwoFactorHandler(twoFASvc, authSvc, userRepo, actRepo)
+	profileHandler := handler.NewProfileHandler(userRepo, actRepo)
 
 	v1 := r.Group("/api/v1")
 	{
@@ -55,7 +59,8 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 			protected.GET("/me", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "authenticated"})
 			})
-			protected.POST("/auth/change-password", authHandler.ChangePassword)
+				protected.POST("/auth/change-password", authHandler.ChangePassword)
+			protected.POST("/auth/logout", authHandler.Logout)
 			protected.GET("/auth/2fa/status", twoFAHandler.GetStatus)
 			protected.POST("/auth/2fa/setup", twoFAHandler.Setup)
 			protected.POST("/auth/2fa/verify-setup", twoFAHandler.VerifySetup)
@@ -76,7 +81,15 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				sa.GET("/:role/permissions", permHandler.GetRolePermissions)
 				sa.PUT("/:role/permissions", permHandler.SetRolePermissions)
 			}
-			protected.GET("/permissions", permHandler.ListAll)
+				protected.GET("/permissions", permHandler.ListAll)
+
+			profile := protected.Group("/profile")
+			{
+				profile.GET("", profileHandler.GetProfile)
+				profile.PUT("", profileHandler.UpdateProfile)
+				profile.POST("/avatar", profileHandler.UploadAvatar)
+				profile.GET("/activities", profileHandler.GetActivities)
+			}
 
 			system := protected.Group("/system")
 			system.Use(middleware.RequireSuperAdmin())

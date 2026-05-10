@@ -21,6 +21,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8080"
+    volumes:
+      - uploads:/app/uploads
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
@@ -44,3 +46,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  uploads:

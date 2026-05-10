@@ -65,6 +65,9 @@ func Migrate(db *sqlx.DB) error {
 	if _, err := db.Exec(migration1); err != nil {
 		return err
 	}
+	if _, err := db.Exec(migration2); err != nil {
+		return err
+	}
 	if _, err := db.Exec(permissionsSchema); err != nil {
 		return err
 	}
@@ -74,8 +77,28 @@ func Migrate(db *sqlx.DB) error {
 	if _, err := db.Exec(totpSchema); err != nil {
 		return err
 	}
+	if _, err := db.Exec(activityLogSchema); err != nil {
+		return err
+	}
 	return nil
 }
+
+const migration2 = `
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+`
+
+const activityLogSchema = `
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event VARCHAR(100) NOT NULL,
+    module VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+`
 
 const totpSchema = `
 CREATE TABLE IF NOT EXISTS system_config (

@@ -39,6 +39,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/inbox/index.vue'),
       },
       {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/pages/profile/index.vue'),
+        meta: { title: 'profile.title' },
+      },
+      {
         path: 'users',
         name: 'Users',
         component: () => import('@/pages/users/index.vue'),

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"github.com/chatagent/server/internal/model"
+	"github.com/chatagent/server/internal/repository"
 	"github.com/chatagent/server/internal/service"
 	"github.com/chatagent/server/pkg/errcode"
 	"github.com/chatagent/server/pkg/response"
@@ -8,12 +10,14 @@ import (
 )
 
 type TwoFactorHandler struct {
-	svc       *service.TwoFactorService
-	authSvc   *service.AuthService
+	svc      *service.TwoFactorService
+	authSvc  *service.AuthService
+	userRepo *repository.UserRepository
+	actRepo  *repository.ActivityRepository
 }
 
-func NewTwoFactorHandler(svc *service.TwoFactorService, authSvc *service.AuthService) *TwoFactorHandler {
-	return &TwoFactorHandler{svc: svc, authSvc: authSvc}
+func NewTwoFactorHandler(svc *service.TwoFactorService, authSvc *service.AuthService, userRepo *repository.UserRepository, actRepo *repository.ActivityRepository) *TwoFactorHandler {
+	return &TwoFactorHandler{svc: svc, authSvc: authSvc, userRepo: userRepo, actRepo: actRepo}
 }
 
 type setup2FAResp struct {
@@ -90,6 +94,14 @@ func (h *TwoFactorHandler) VerifyLogin(c *gin.Context) {
 		response.Error(c, errcode.ServerError)
 		return
 	}
+
+	h.userRepo.UpdateLastLogin(user.ID)
+	h.actRepo.Create(&model.ActivityLog{
+		UserID:  user.ID,
+		Event:   "login",
+		Module:  "auth",
+		Content: "User logged in (2FA verified)",
+	})
 
 	response.Success(c, gin.H{"token": token, "user": user})
 }

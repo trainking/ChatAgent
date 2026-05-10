@@ -105,12 +105,17 @@
             <span class="action-item user-action">
               <el-avatar
                 :size="28"
-                icon="UserFilled"
-              />
+                :src="userStore.user?.avatar_url || ''"
+              >
+                <el-icon><UserFilled /></el-icon>
+              </el-avatar>
               <span class="user-name">{{ userStore.user?.name || 'User' }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item @click="goProfile">
+                  <el-icon><User /></el-icon>{{ $t('layout.profile') }}
+                </el-dropdown-item>
                 <el-dropdown-item @click="showPwdDialog = true">
                   <el-icon><Key /></el-icon>{{ $t('layout.changePassword') }}
                 </el-dropdown-item>
@@ -192,6 +197,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { changePassword } from '@/api/auth'
+import { logout } from '@/api/profile'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 
@@ -241,7 +247,8 @@ async function handlePwdSubmit() {
   } catch {} finally { pwdLoading.value = false }
 }
 
-function handleLogout() { userStore.clearAuth(); router.push('/login') }
+function goProfile() { router.push('/dashboard/profile') }
+async function handleLogout() { try { await logout() } catch {} userStore.clearAuth(); router.push('/login') }
 
 function handleLangSwitch(lang: string) { locale.value = lang; localStorage.setItem('lang', lang) }
 </script>

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"github.com/chatagent/server/internal/model"
+	"github.com/chatagent/server/internal/repository"
 	"github.com/chatagent/server/internal/service"
 	"github.com/chatagent/server/pkg/errcode"
 	"github.com/chatagent/server/pkg/response"
@@ -8,12 +10,14 @@ import (
 )
 
 type AuthHandler struct {
-	svc     *service.AuthService
-	twoFA   *service.TwoFactorService
+	svc      *service.AuthService
+	twoFA    *service.TwoFactorService
+	userRepo *repository.UserRepository
+	actRepo  *repository.ActivityRepository
 }
 
-func NewAuthHandler(svc *service.AuthService, twoFA *service.TwoFactorService) *AuthHandler {
-	return &AuthHandler{svc: svc, twoFA: twoFA}
+func NewAuthHandler(svc *service.AuthService, twoFA *service.TwoFactorService, userRepo *repository.UserRepository, actRepo *repository.ActivityRepository) *AuthHandler {
+	return &AuthHandler{svc: svc, twoFA: twoFA, userRepo: userRepo, actRepo: actRepo}
 }
 
 type loginReq struct {
@@ -111,6 +115,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	h.userRepo.UpdateLastLogin(user.ID)
+	h.actRepo.Create(&model.ActivityLog{
+		UserID:  user.ID,
+		Event:   "login",
+		Module:  "auth",
+		Content: "User logged in",
+	})
+
 	response.Success(c, gin.H{"token": token, "user": user})
 }
 
@@ -140,6 +152,30 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		}
 		return
 	}
+
+	h.actRepo.Create(&model.ActivityLog{
+		UserID:  claims.UserID,
+		Event:   "change_password",
+		Module:  "auth",
+		Content: "Password changed",
+	})
+
+	response.Success(c, nil)
+}
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	claims := AuthClaims(c)
+	if claims == nil {
+		response.Error(c, errcode.Unauthorized)
+		return
+	}
+
+	h.actRepo.Create(&model.ActivityLog{
+		UserID:  claims.UserID,
+		Event:   "logout",
+		Module:  "auth",
+		Content: "User logged out",
+	})
 
 	response.Success(c, nil)
 }
