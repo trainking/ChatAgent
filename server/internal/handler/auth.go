@@ -116,6 +116,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	h.userRepo.UpdateLastLogin(user.ID)
+	user.OnlineStatus = "online"
 	h.actRepo.Create(&model.ActivityLog{
 		UserID:  user.ID,
 		Event:   "login",
@@ -170,6 +171,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
+	h.userRepo.UpdateOnlineStatus(claims.UserID, "offline")
 	h.actRepo.Create(&model.ActivityLog{
 		UserID:  claims.UserID,
 		Event:   "logout",

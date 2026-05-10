@@ -20,6 +20,10 @@ export function getActivities(page: number = 1, pageSize: number = 20) {
   return request.get('/profile/activities', { params: { page, page_size: pageSize } })
 }
 
+export function updateOnlineStatus(onlineStatus: string) {
+  return request.put('/profile/status', { online_status: onlineStatus })
+}
+
 export function logout() {
   return request.post('/auth/logout')
 }

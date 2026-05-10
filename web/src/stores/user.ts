@@ -8,6 +8,7 @@ interface User {
   role: string
   avatar_url: string
   must_change_password: boolean
+  online_status: string
   created_at: string
   last_login_at: string | null
 }

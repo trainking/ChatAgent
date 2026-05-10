@@ -88,7 +88,8 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				profile.GET("", profileHandler.GetProfile)
 				profile.PUT("", profileHandler.UpdateProfile)
 				profile.POST("/avatar", profileHandler.UploadAvatar)
-				profile.GET("/activities", profileHandler.GetActivities)
+					profile.GET("/activities", profileHandler.GetActivities)
+				profile.PUT("/status", profileHandler.UpdateStatus)
 			}
 
 			system := protected.Group("/system")

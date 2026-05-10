@@ -58,6 +58,7 @@
         <el-table-column
           prop="status"
           :label="$t('users.status')"
+          width="80"
         >
           <template #default="{ row }">
             <el-tag
@@ -66,6 +67,16 @@
             >
               {{ row.status === 'active' ? $t('users.statusActive') : $t('users.statusDisabled') }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="online_status"
+          :label="$t('users.onlineStatus')"
+          width="100"
+        >
+          <template #default="{ row }">
+            <span class="status-dot" :class="row.online_status || 'offline'" />
+            <span>{{ $t('onlineStatus.' + (row.online_status || 'offline')) }}</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -376,4 +387,15 @@ async function handleDelete(row: any) {
 
 <style scoped lang="scss">
 .users-page { .card-header { display: flex; justify-content: space-between; align-items: center; } }
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  background: #909399;
+  &.online { background: #67c23a; }
+  &.offline { background: #909399; }
+  &.busy { background: #e6a23c; }
+}
 </style>

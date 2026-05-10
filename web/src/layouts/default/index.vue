@@ -84,6 +84,38 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
+          <el-dropdown
+            trigger="click"
+            @command="handleStatusSwitch"
+          >
+            <span class="action-item">
+              <span
+                class="status-dot"
+                :class="statusDotClass"
+              />
+              <span>{{ statusLabel }}</span>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="online">
+                  <span
+                    class="status-dot online"
+                  />{{ $t('onlineStatus.online') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="busy">
+                  <span
+                    class="status-dot busy"
+                  />{{ $t('onlineStatus.busy') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="offline">
+                  <span
+                    class="status-dot offline"
+                  />{{ $t('onlineStatus.offline') }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
           <el-dropdown @command="handleLangSwitch">
             <span class="action-item">
               <el-icon><Switch /></el-icon>
@@ -197,7 +229,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { changePassword } from '@/api/auth'
-import { logout } from '@/api/profile'
+import { logout, updateOnlineStatus } from '@/api/profile'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 
@@ -211,6 +243,22 @@ const breadcrumbTitle = computed(() => {
   const meta = route.matched[route.matched.length - 1]?.meta || {}
   return (meta.title as string) || route.name || ''
 })
+
+const statusDotClass = computed(() => userStore.user?.online_status || 'offline')
+const statusLabel = computed(() => {
+  const s = userStore.user?.online_status || 'offline'
+  return (t as any)(`onlineStatus.${s}`)
+})
+
+async function handleStatusSwitch(status: string) {
+  try {
+    await updateOnlineStatus(status)
+    if (userStore.user) {
+      userStore.user.online_status = status
+      localStorage.setItem('user', JSON.stringify(userStore.user))
+    }
+  } catch {}
+}
 
 const showPwdDialog = ref(false)
 const pwdLoading = ref(false)
@@ -328,4 +376,16 @@ function handleLangSwitch(lang: string) { locale.value = lang; localStorage.setI
 }
 
 .bold { font-weight: 700; }
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  background: #909399;
+  &.online { background: #67c23a; }
+  &.offline { background: #909399; }
+  &.busy { background: #e6a23c; }
+}
 </style>

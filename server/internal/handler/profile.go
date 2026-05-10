@@ -161,6 +161,38 @@ func (h *ProfileHandler) UploadAvatar(c *gin.Context) {
 	response.Success(c, gin.H{"avatar_url": avatarURL})
 }
 
+type updateStatusReq struct {
+	OnlineStatus string `json:"online_status" binding:"required"`
+}
+
+func (h *ProfileHandler) UpdateStatus(c *gin.Context) {
+	claims := AuthClaims(c)
+	if claims == nil {
+		response.Error(c, errcode.Unauthorized)
+		return
+	}
+
+	var req updateStatusReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errcode.InvalidParam)
+		return
+	}
+
+	switch req.OnlineStatus {
+	case "online", "offline", "busy":
+	default:
+		response.ErrorMsg(c, errcode.InvalidParam, "online_status must be one of: online, offline, busy")
+		return
+	}
+
+	if err := h.userRepo.UpdateOnlineStatus(claims.UserID, req.OnlineStatus); err != nil {
+		response.Error(c, errcode.ServerError)
+		return
+	}
+
+	response.Success(c, gin.H{"online_status": req.OnlineStatus})
+}
+
 func (h *ProfileHandler) GetActivities(c *gin.Context) {
 	claims := AuthClaims(c)
 	if claims == nil {

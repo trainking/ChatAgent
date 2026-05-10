@@ -90,6 +90,7 @@ export default {
     email: '邮箱',
     role: '角色',
     status: '状态',
+    onlineStatus: '在线状态',
     passwordStatus: '密码状态',
     createdAt: '创建时间',
     actions: '操作',
@@ -142,5 +143,10 @@ export default {
     setupTitle: '设置两步验证',
     setupDesc: '请使用 Google Authenticator 或类似应用扫描以下二维码',
     manualKey: '手动密钥',
+  },
+  onlineStatus: {
+    online: '在线',
+    offline: '离线',
+    busy: '忙碌中',
   },
 }

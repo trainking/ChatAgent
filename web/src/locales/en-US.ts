@@ -90,6 +90,7 @@ export default {
     email: 'Email',
     role: 'Role',
     status: 'Status',
+    onlineStatus: 'Online',
     passwordStatus: 'Password',
     createdAt: 'Created',
     actions: 'Actions',
@@ -142,5 +143,10 @@ export default {
     setupTitle: 'Set Up Two-Factor Authentication',
     setupDesc: 'Scan the QR code with Google Authenticator or a similar app',
     manualKey: 'Manual key',
+  },
+  onlineStatus: {
+    online: 'Online',
+    offline: 'Offline',
+    busy: 'Busy',
   },
 }

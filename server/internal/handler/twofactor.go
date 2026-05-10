@@ -96,6 +96,7 @@ func (h *TwoFactorHandler) VerifyLogin(c *gin.Context) {
 	}
 
 	h.userRepo.UpdateLastLogin(user.ID)
+	user.OnlineStatus = "online"
 	h.actRepo.Create(&model.ActivityLog{
 		UserID:  user.ID,
 		Event:   "login",

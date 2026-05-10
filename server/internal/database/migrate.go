@@ -68,6 +68,9 @@ func Migrate(db *sqlx.DB) error {
 	if _, err := db.Exec(migration2); err != nil {
 		return err
 	}
+	if _, err := db.Exec(migration3); err != nil {
+		return err
+	}
 	if _, err := db.Exec(permissionsSchema); err != nil {
 		return err
 	}
@@ -85,6 +88,10 @@ func Migrate(db *sqlx.DB) error {
 
 const migration2 = `
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+`
+
+const migration3 = `
+ALTER TABLE users ADD COLUMN IF NOT EXISTS online_status VARCHAR(20) NOT NULL DEFAULT 'offline';
 `
 
 const activityLogSchema = `
