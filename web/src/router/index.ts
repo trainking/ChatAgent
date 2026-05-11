@@ -31,7 +31,7 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/layouts/default/index.vue'),
-    redirect: '/dashboard/inbox',
+    redirect: '/dashboard/conversations',
     children: [
       {
         path: 'inbox',
@@ -42,6 +42,26 @@ const routes: RouteRecordRaw[] = [
         path: 'inbox/:id',
         name: 'InboxDetail',
         component: () => import('@/pages/inbox/detail.vue'),
+      },
+      {
+        path: 'conversations',
+        name: 'Conversations',
+        component: () => import('@/pages/conversations/index.vue'),
+      },
+      {
+        path: 'conversations/:id',
+        name: 'ConversationDetail',
+        component: () => import('@/pages/conversations/index.vue'),
+      },
+      {
+        path: 'contacts',
+        name: 'Contacts',
+        component: () => import('@/pages/contacts/index.vue'),
+      },
+      {
+        path: 'contacts/:id',
+        name: 'ContactDetail',
+        component: () => import('@/pages/contacts/detail.vue'),
       },
       {
         path: 'profile',

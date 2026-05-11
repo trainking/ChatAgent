@@ -5,6 +5,7 @@
   vars:
     project_dir: /opt/chatagent
     deploy_dir: /opt/chatagent/deploy
+    local_src: "{{ lookup('env', 'CHATAGENT_SRC') | default('/mnt/d/trainking/chatagent/ChatAgent', true) }}"
 
   tasks:
     - name: Check if Docker already installed
@@ -99,7 +100,7 @@
 
     - name: Copy server source
       synchronize:
-        src: /mnt/d/trainking/chatagent/ChatAgent/server/
+        src: "{{ local_src }}/server/"
         dest: "{{ project_dir }}/server/"
         rsync_opts:
           - "--exclude=bin/"
@@ -107,16 +108,38 @@
 
     - name: Copy web source
       synchronize:
-        src: /mnt/d/trainking/chatagent/ChatAgent/web/
+        src: "{{ local_src }}/web/"
         dest: "{{ project_dir }}/web/"
+        rsync_opts:
+          - "--exclude=node_modules/"
+          - "--exclude=.git/"
+
+    - name: Copy widget source
+      synchronize:
+        src: "{{ local_src }}/widget/"
+        dest: "{{ project_dir }}/widget/"
         rsync_opts:
           - "--exclude=node_modules/"
           - "--exclude=.git/"
 
     - name: Copy deploy compose file
       copy:
-        src: /mnt/d/trainking/chatagent/ChatAgent/deploy/docker-compose.yml
+        src: "{{ local_src }}/deploy/docker-compose.yml"
         dest: "{{ deploy_dir }}/docker-compose.yml"
+
+    - name: Build widget (if source available)
+      shell:
+        cmd: |
+          cd {{ project_dir }}/widget && npm install --registry=https://registry.npmmirror.com && npm run build 2>&1
+        chdir: "{{ project_dir }}/widget"
+      ignore_errors: yes
+
+    - name: Copy widget.js to web public
+      copy:
+        src: "{{ project_dir }}/widget/dist/widget.js"
+        dest: "{{ project_dir }}/web/public/widget.js"
+        remote_src: yes
+      ignore_errors: yes
 
     - name: Build server image
       shell:
@@ -148,7 +171,7 @@
 
     - name: Deploy nginx config for ChatAgent
       template:
-        src: /mnt/d/trainking/chatagent/ChatAgent/ansible/templates/chatagent.conf.j2
+        src: "{{ local_src }}/ansible/templates/chatagent.conf.j2"
         dest: /etc/nginx/conf.d/chatagent.conf
         mode: '0644'
       notify: reload nginx

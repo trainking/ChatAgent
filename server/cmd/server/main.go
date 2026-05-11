@@ -41,7 +41,15 @@ func main() {
 	}
 	logger.Info("database migrated")
 
-	r := router.Setup(cfg, db)
+	// Connect to Redis
+	rdb, err := database.NewRedis(cfg.Redis)
+	if err != nil {
+		logger.Fatal("failed to connect to redis", zap.Error(err))
+	}
+	defer rdb.Close()
+	logger.Info("redis connected")
+
+	r := router.Setup(cfg, db, rdb)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

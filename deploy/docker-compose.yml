@@ -28,9 +28,14 @@ services:
       REDIS_HOST: redis
       GIN_MODE: release
       LOG_FORMAT: json
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-changeme-in-production}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
     restart: unless-stopped
 
   web:

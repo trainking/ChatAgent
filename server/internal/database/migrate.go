@@ -58,6 +58,105 @@ SELECT 'agent', code FROM permissions WHERE code IN
 ON CONFLICT DO NOTHING;
 `
 
+const contactsSchema = `
+CREATE TABLE IF NOT EXISTS contacts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL DEFAULT '',
+    email VARCHAR(255) DEFAULT '',
+    phone VARCHAR(32) DEFAULT '',
+    avatar_url VARCHAR(500) DEFAULT '',
+    contact_type VARCHAR(20) NOT NULL DEFAULT 'visitor',
+    blocked BOOLEAN NOT NULL DEFAULT false,
+    browser_fingerprints JSONB NOT NULL DEFAULT '[]',
+    country VARCHAR(100) DEFAULT '',
+    city VARCHAR(100) DEFAULT '',
+    browser VARCHAR(100) DEFAULT '',
+    os VARCHAR(100) DEFAULT '',
+    custom_attrs JSONB NOT NULL DEFAULT '{}',
+    last_activity_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+`
+
+const contactInboxesSchema = `
+CREATE TABLE IF NOT EXISTS contact_inboxes (
+    contact_id UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    inbox_id UUID NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+    source_id VARCHAR(200) NOT NULL DEFAULT '',
+    pubsub_token VARCHAR(255) NOT NULL DEFAULT '',
+    hmac_verified BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (contact_id, inbox_id)
+);
+`
+
+const conversationsSchema = `
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    display_id INT NOT NULL DEFAULT 0,
+    inbox_id UUID NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+    contact_id UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    assignee_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    priority VARCHAR(10) NOT NULL DEFAULT 'medium',
+    subject VARCHAR(255) NOT NULL DEFAULT '',
+    unread_count INT NOT NULL DEFAULT 0,
+    last_message_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    waiting_since TIMESTAMP,
+    first_reply_at TIMESTAMP,
+    resolved_at TIMESTAMP,
+    snoozed_until TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+`
+
+const messagesSchema = `
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_type VARCHAR(20) NOT NULL DEFAULT 'contact',
+    sender_id UUID NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    message_type VARCHAR(20) NOT NULL DEFAULT 'incoming',
+    content_type VARCHAR(50) NOT NULL DEFAULT 'text/html',
+    file_url VARCHAR(1000) DEFAULT '',
+    file_name VARCHAR(255) DEFAULT '',
+    file_size BIGINT DEFAULT 0,
+    status VARCHAR(10) NOT NULL DEFAULT 'sent',
+    private BOOLEAN NOT NULL DEFAULT false,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+`
+
+const cannedResponsesSchema = `
+CREATE TABLE IF NOT EXISTS canned_responses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    inbox_id UUID REFERENCES inboxes(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+`
+
+const v2Indexes = `
+CREATE INDEX IF NOT EXISTS idx_conversations_inbox_status_time ON conversations(inbox_id, status, last_message_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_inbox_display_id ON conversations(inbox_id, display_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_assignee ON conversations(assignee_id, status);
+CREATE INDEX IF NOT EXISTS idx_conversations_contact ON conversations(contact_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id, id);
+CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email) WHERE email != '';
+CREATE INDEX IF NOT EXISTS idx_contacts_phone ON contacts(phone) WHERE phone != '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_contact_inboxes_source ON contact_inboxes(inbox_id, source_id);
+CREATE INDEX IF NOT EXISTS idx_contact_inboxes_token ON contact_inboxes(pubsub_token);
+`
+
 func Migrate(db *sqlx.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
@@ -84,6 +183,24 @@ func Migrate(db *sqlx.DB) error {
 		return err
 	}
 	if _, err := db.Exec(inboxSchema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(contactsSchema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(contactInboxesSchema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(conversationsSchema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(messagesSchema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(cannedResponsesSchema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(v2Indexes); err != nil {
 		return err
 	}
 	return nil

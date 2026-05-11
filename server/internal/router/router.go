@@ -6,11 +6,13 @@ import (
 	"github.com/chatagent/server/internal/middleware"
 	"github.com/chatagent/server/internal/repository"
 	"github.com/chatagent/server/internal/service"
+	"github.com/chatagent/server/internal/websocket"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 )
 
-func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
+func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -32,9 +34,16 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 	totpRepo := repository.NewUserTOTPRepository(db)
 	actRepo := repository.NewActivityRepository(db)
 	inboxRepo := repository.NewInboxRepository(db)
+	contactRepo := repository.NewContactRepository(db)
+	contactInboxRepo := repository.NewContactInboxRepository(db)
+	convRepo := repository.NewConversationRepository(db, rdb)
+	msgRepo := repository.NewMessageRepository(db)
 
 	authSvc := service.NewAuthService(userRepo, cfg)
 	twoFASvc := service.NewTwoFactorService(totpRepo, sysCfgRepo, cfg.JWT.Secret)
+
+	hub := websocket.NewHub()
+	go hub.Run()
 
 	authHandler := handler.NewAuthHandler(authSvc, twoFASvc, userRepo, actRepo)
 	userHandler := handler.NewUserHandler(userRepo)
@@ -43,6 +52,11 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 	twoFAHandler := handler.NewTwoFactorHandler(twoFASvc, authSvc, userRepo, actRepo)
 	profileHandler := handler.NewProfileHandler(userRepo, actRepo)
 	inboxHandler := handler.NewInboxHandler(inboxRepo, userRepo)
+	conversationH := handler.NewConversationHandler(convRepo, msgRepo, contactRepo, userRepo, inboxRepo, hub)
+	messageH := handler.NewMessageHandler(msgRepo, convRepo, hub)
+	contactH := handler.NewContactHandler(contactRepo, convRepo, db)
+	widgetH := handler.NewWidgetHandler(db, inboxRepo, contactRepo, contactInboxRepo, convRepo, msgRepo, hub)
+	uploadH := handler.NewUploadHandler()
 
 	v1 := r.Group("/api/v1")
 	{
@@ -109,8 +123,45 @@ func Setup(cfg *config.Config, db *sqlx.DB) *gin.Engine {
 				system.GET("/2fa/config", sysHandler.Get2FAConfig)
 				system.PUT("/2fa/config", sysHandler.Set2FAConfig)
 			}
+
+			conversations := protected.Group("/conversations")
+			{
+				conversations.GET("", conversationH.List)
+				conversations.GET("/unread-count", conversationH.UnreadCount)
+				conversations.GET("/:id", conversationH.Get)
+				conversations.PUT("/:id/assign", conversationH.Assign)
+				conversations.PUT("/:id/status", conversationH.ChangeStatus)
+				conversations.PUT("/:id/priority", conversationH.ChangePriority)
+			}
+
+			protected.GET("/conversations/:id/messages", messageH.List)
+			protected.POST("/conversations/:id/messages", messageH.Create)
+			protected.POST("/conversations/:id/messages/:fid/retry", messageH.Retry)
+
+			protected.POST("/upload", uploadH.Upload)
+
+			contacts := protected.Group("/contacts")
+			{
+				contacts.GET("", contactH.List)
+				contacts.POST("", contactH.Create)
+				contacts.GET("/:id", contactH.Get)
+				contacts.PUT("/:id", contactH.Update)
+				contacts.POST("/:id/merge", contactH.Merge)
+				contacts.GET("/:id/conversations", contactH.GetConversations)
+			}
 		}
+
+		v1.POST("/widget/auth", widgetH.Auth)
+	v1.POST("/widget/messages", widgetH.SendMessage)
 	}
+
+	wsDeps := &websocket.HandlerDeps{
+		Hub:              hub,
+		AuthSvc:          authSvc,
+		ContactInboxRepo: contactInboxRepo,
+		UserRepo:         userRepo,
+	}
+	r.GET("/ws", websocket.HandleWebSocket(wsDeps))
 
 	return r
 }

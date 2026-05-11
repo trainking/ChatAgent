@@ -28,8 +28,20 @@
           active-text-color="#fff"
           router
         >
-          <el-menu-item index="/dashboard/inbox">
+          <el-menu-item index="/dashboard/conversations">
             <el-icon><ChatDotRound /></el-icon>
+            <template #title>
+              {{ $t('layout.conversations') }}
+            </template>
+          </el-menu-item>
+          <el-menu-item index="/dashboard/contacts">
+            <el-icon><User /></el-icon>
+            <template #title>
+              {{ $t('layout.contacts') }}
+            </template>
+          </el-menu-item>
+          <el-menu-item index="/dashboard/inbox">
+            <el-icon><Message /></el-icon>
             <template #title>
               {{ $t('layout.inbox') }}
             </template>
