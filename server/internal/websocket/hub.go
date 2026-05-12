@@ -3,23 +3,28 @@ package websocket
 import (
 	"encoding/json"
 	"log"
+	"strings"
 	"sync"
+
+	"github.com/chatagent/server/internal/repository"
 )
 
 type Hub struct {
-	clients     map[string]map[*Client]bool
-	Register    chan *Client
-	Unregister  chan *Client
-	mu          sync.RWMutex
-	agentConns  map[string]*Client
+	clients    map[string]map[*Client]bool
+	Register   chan *Client
+	Unregister chan *Client
+	mu         sync.RWMutex
+	agentConns map[string]*Client
+	convRepo   *repository.ConversationRepository
 }
 
-func NewHub() *Hub {
+func NewHub(convRepo *repository.ConversationRepository) *Hub {
 	return &Hub{
 		clients:    make(map[string]map[*Client]bool),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		agentConns: make(map[string]*Client),
+		convRepo:   convRepo,
 	}
 }
 
@@ -128,12 +133,56 @@ func (h *Hub) ProcessMessage(client *Client, message []byte) {
 
 	switch req.Action {
 	case "subscribe":
+		if !h.CanSubscribe(client, req.Channel) {
+			log.Printf("ws subscribe denied: client=%s channel=%s", client.ID, req.Channel)
+			return
+		}
 		h.Subscribe(client, req.Channel)
 	case "unsubscribe":
 		h.Unsubscribe(client, req.Channel)
 	default:
 		log.Printf("ws unknown action: %s", req.Action)
 	}
+}
+
+func (h *Hub) CanSubscribe(client *Client, channel string) bool {
+	if channel == "" {
+		return false
+	}
+
+	if strings.HasPrefix(channel, "inbox:") {
+		if client.ClientType != ClientTypeAgent {
+			return false
+		}
+		inboxID := strings.TrimPrefix(channel, "inbox:")
+		return stringInSlice(inboxID, client.InboxIDs)
+	}
+
+	if strings.HasPrefix(channel, "conversation:") {
+		if h.convRepo == nil {
+			return false
+		}
+		convID := strings.TrimPrefix(channel, "conversation:")
+		conv, err := h.convRepo.FindByID(convID)
+		if err != nil {
+			return false
+		}
+		if client.ClientType == ClientTypeWidget {
+			return conv.ContactID == client.ContactID && conv.InboxID == client.InboxID
+		}
+		return stringInSlice(conv.InboxID, client.InboxIDs)
+	}
+
+	return false
+}
+
+func stringInSlice(value string, values []string) bool {
+	for _, item := range values {
+		if item == value {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Hub) IsUserOnline(userID string) bool {

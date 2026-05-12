@@ -207,17 +207,24 @@ func (h *ContactHandler) Merge(c *gin.Context) {
 		return
 	}
 
-	// Transfer contact_inboxes to target (update contact_id, skip conflicts)
+	// Drop source contact_inboxes that would conflict with existing target rows,
+	// then transfer the remaining rows to the target contact.
 	if _, err := tx.Exec(
-		"UPDATE contact_inboxes SET contact_id = $1 WHERE contact_id = $2 ON CONFLICT DO NOTHING",
-		target.ID, source.ID,
+		`DELETE FROM contact_inboxes s
+		 WHERE s.contact_id = $1
+		   AND EXISTS (
+		     SELECT 1 FROM contact_inboxes t
+		     WHERE t.contact_id = $2 AND t.inbox_id = s.inbox_id
+		   )`,
+		source.ID, target.ID,
 	); err != nil {
 		response.Error(c, errcode.DBError)
 		return
 	}
-
-	// Delete remaining source contact_inbox records
-	if _, err := tx.Exec("DELETE FROM contact_inboxes WHERE contact_id = $1", source.ID); err != nil {
+	if _, err := tx.Exec(
+		"UPDATE contact_inboxes SET contact_id = $1 WHERE contact_id = $2",
+		target.ID, source.ID,
+	); err != nil {
 		response.Error(c, errcode.DBError)
 		return
 	}

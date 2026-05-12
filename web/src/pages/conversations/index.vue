@@ -128,7 +128,7 @@
                 </span>
               </a>
             </div>
-            <div v-if="msg.content" class="msg-content" v-html="msg.content" />
+            <div v-if="msg.content" class="msg-content" v-html="sanitizeMessage(msg.content)" />
             <div class="msg-time">{{ formatTime(msg.created_at) }}</div>
           </div>
           <div v-if="msg.sender_type === 'user'" class="msg-status">
@@ -306,6 +306,22 @@ function priorityLabel(p: string) {
     urgent: (t as any)('conversation.priorityUrgent'),
   }
   return m[p] || p
+}
+
+function sanitizeMessage(html: string) {
+  const template = document.createElement('template')
+  template.innerHTML = html
+  template.content.querySelectorAll('script, iframe, object, embed, link, meta').forEach((node) => node.remove())
+  template.content.querySelectorAll('*').forEach((node) => {
+    for (const attr of Array.from(node.attributes)) {
+      const name = attr.name.toLowerCase()
+      const value = attr.value.trim().toLowerCase()
+      if (name.startsWith('on') || value.startsWith('javascript:')) {
+        node.removeAttribute(attr.name)
+      }
+    }
+  })
+  return template.innerHTML
 }
 
 async function selectConversation(conv: ConversationItem) {

@@ -17,7 +17,7 @@ const (
 type ClientType int
 
 const (
-	ClientTypeAgent  ClientType = iota
+	ClientTypeAgent ClientType = iota
 	ClientTypeWidget
 )
 
@@ -33,6 +33,8 @@ type Client struct {
 	UserName       string
 	Role           string
 	InboxIDs       []string
+	ContactID      string
+	InboxID        string
 	ContactInboxID string
 }
 

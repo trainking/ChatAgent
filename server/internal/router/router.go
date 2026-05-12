@@ -42,7 +42,7 @@ func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 	authSvc := service.NewAuthService(userRepo, cfg)
 	twoFASvc := service.NewTwoFactorService(totpRepo, sysCfgRepo, cfg.JWT.Secret)
 
-	hub := websocket.NewHub()
+	hub := websocket.NewHub(convRepo)
 	go hub.Run()
 
 	authHandler := handler.NewAuthHandler(authSvc, twoFASvc, userRepo, actRepo)
@@ -75,7 +75,7 @@ func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 			protected.GET("/me", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "authenticated"})
 			})
-				protected.POST("/auth/change-password", authHandler.ChangePassword)
+			protected.POST("/auth/change-password", authHandler.ChangePassword)
 			protected.POST("/auth/logout", authHandler.Logout)
 			protected.GET("/auth/2fa/status", twoFAHandler.GetStatus)
 			protected.POST("/auth/2fa/setup", twoFAHandler.Setup)
@@ -97,7 +97,7 @@ func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 				sa.GET("/:role/permissions", permHandler.GetRolePermissions)
 				sa.PUT("/:role/permissions", permHandler.SetRolePermissions)
 			}
-				protected.GET("/permissions", permHandler.ListAll)
+			protected.GET("/permissions", permHandler.ListAll)
 
 			inboxes := protected.Group("/inboxes")
 			{
@@ -113,7 +113,7 @@ func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 				profile.GET("", profileHandler.GetProfile)
 				profile.PUT("", profileHandler.UpdateProfile)
 				profile.POST("/avatar", profileHandler.UploadAvatar)
-					profile.GET("/activities", profileHandler.GetActivities)
+				profile.GET("/activities", profileHandler.GetActivities)
 				profile.PUT("/status", profileHandler.UpdateStatus)
 			}
 
@@ -152,7 +152,7 @@ func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 		}
 
 		v1.POST("/widget/auth", widgetH.Auth)
-	v1.POST("/widget/messages", widgetH.SendMessage)
+		v1.POST("/widget/messages", widgetH.SendMessage)
 	}
 
 	wsDeps := &websocket.HandlerDeps{
@@ -160,6 +160,7 @@ func Setup(cfg *config.Config, db *sqlx.DB, rdb *redis.Client) *gin.Engine {
 		AuthSvc:          authSvc,
 		ContactInboxRepo: contactInboxRepo,
 		UserRepo:         userRepo,
+		InboxRepo:        inboxRepo,
 	}
 	r.GET("/ws", websocket.HandleWebSocket(wsDeps))
 

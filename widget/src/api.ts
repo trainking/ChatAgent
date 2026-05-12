@@ -26,18 +26,24 @@ export async function widgetAuth(fingerprint?: string): Promise<boolean> {
   }
 }
 
-export async function sendMessage(content: string): Promise<{ conversationId?: string } | null> {
+export async function sendMessage(content: string, visitor?: { name?: string; email?: string }): Promise<{ conversationId?: string } | null> {
   const s = getStore()
   try {
     const resp = await fetch(s.baseUrl + '/api/v1/widget/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pubsub_token: s.pubsubToken, content, content_type: 'text/html' }),
+      body: JSON.stringify({
+        pubsub_token: s.pubsubToken,
+        content,
+        content_type: 'text/html',
+        name: visitor?.name || '',
+        email: visitor?.email || '',
+      }),
     })
     if (!resp.ok) return null
     const json = await resp.json()
     if (json.code !== 0) return null
-    return json.data
+    return { conversationId: json.data?.conversation_id }
   } catch {
     return null
   }

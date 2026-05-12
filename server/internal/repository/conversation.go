@@ -57,14 +57,31 @@ func (r *ConversationRepository) FindByID(id string) (*model.Conversation, error
 	return &conv, nil
 }
 
+func (r *ConversationRepository) FindActiveByContactInbox(contactID string, inboxID string) (*model.Conversation, error) {
+	var conv model.Conversation
+	err := r.db.Get(&conv, `
+		SELECT * FROM conversations
+		WHERE contact_id = $1 AND inbox_id = $2 AND status IN ('open', 'pending', 'snoozed', 'resolved')
+		ORDER BY last_message_at DESC
+		LIMIT 1`,
+		contactID, inboxID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &conv, nil
+}
+
 type ConversationFilter struct {
-	InboxID    string
-	Status     string
-	Priority   string
-	AssigneeID string
-	Search     string
-	Page       int
-	PageSize   int
+	InboxID        string
+	InboxIDs       []string
+	Status         string
+	Priority       string
+	AssigneeID     string
+	AssigneeSelfID string
+	Search         string
+	Page           int
+	PageSize       int
 }
 
 func (r *ConversationRepository) List(filter ConversationFilter) ([]model.Conversation, int64, error) {
@@ -76,6 +93,17 @@ func (r *ConversationRepository) List(filter ConversationFilter) ([]model.Conver
 		where += fmt.Sprintf(" AND c.inbox_id = $%d", argIdx)
 		args = append(args, filter.InboxID)
 		argIdx++
+	} else if len(filter.InboxIDs) > 0 {
+		where += " AND c.inbox_id IN ("
+		for i, inboxID := range filter.InboxIDs {
+			if i > 0 {
+				where += ", "
+			}
+			where += fmt.Sprintf("$%d", argIdx)
+			args = append(args, inboxID)
+			argIdx++
+		}
+		where += ")"
 	}
 	if filter.Status != "" {
 		where += fmt.Sprintf(" AND c.status = $%d", argIdx)
@@ -90,7 +118,13 @@ func (r *ConversationRepository) List(filter ConversationFilter) ([]model.Conver
 	if filter.AssigneeID == "unassigned" {
 		where += " AND c.assignee_id IS NULL"
 	} else if filter.AssigneeID == "me" {
-		where += " AND c.assignee_id IS NOT NULL"
+		if filter.AssigneeSelfID == "" {
+			where += " AND c.assignee_id IS NOT NULL"
+		} else {
+			where += fmt.Sprintf(" AND c.assignee_id = $%d", argIdx)
+			args = append(args, filter.AssigneeSelfID)
+			argIdx++
+		}
 	} else if filter.AssigneeID != "" {
 		where += fmt.Sprintf(" AND c.assignee_id = $%d", argIdx)
 		args = append(args, filter.AssigneeID)
@@ -243,8 +277,8 @@ func (r *ConversationRepository) updateFields(id string, updates map[string]inte
 
 func (r *ConversationRepository) ReopenFromResolved(id string) error {
 	return r.updateFields(id, map[string]interface{}{
-		"status":       "open",
-		"resolved_at":  nil,
+		"status":        "open",
+		"resolved_at":   nil,
 		"waiting_since": time.Now(),
 	})
 }

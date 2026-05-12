@@ -21,6 +21,9 @@ func (r *ContactRepository) Create(contact *model.Contact) error {
 	now := time.Now()
 	contact.CreatedAt = now
 	contact.UpdatedAt = now
+	if contact.LastActivityAt.IsZero() {
+		contact.LastActivityAt = now
+	}
 
 	return r.db.QueryRow(
 		`INSERT INTO contacts (name, email, phone, avatar_url, contact_type, blocked, browser_fingerprints, country, city, browser, os, custom_attrs, last_activity_at, created_at, updated_at)

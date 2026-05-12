@@ -18,10 +18,11 @@ var upgrader = websocket.Upgrader{
 }
 
 type HandlerDeps struct {
-	Hub           *Hub
-	AuthSvc       *service.AuthService
+	Hub              *Hub
+	AuthSvc          *service.AuthService
 	ContactInboxRepo *repository.ContactInboxRepository
 	UserRepo         *repository.UserRepository
+	InboxRepo        *repository.InboxRepository
 }
 
 func HandleWebSocket(deps *HandlerDeps) gin.HandlerFunc {
@@ -50,6 +51,16 @@ func HandleWebSocket(deps *HandlerDeps) gin.HandlerFunc {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 				return
 			}
+			isAdmin := agentClaims.Role == "admin" || agentClaims.Role == "super_admin"
+			inboxes, err := deps.InboxRepo.ListByUser(agentClaims.UserID, isAdmin)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "inboxes not found"})
+				return
+			}
+			inboxIDs := make([]string, 0, len(inboxes))
+			for _, inbox := range inboxes {
+				inboxIDs = append(inboxIDs, inbox.ID)
+			}
 
 			client = &Client{
 				ID:         agentClaims.UserID,
@@ -61,6 +72,7 @@ func HandleWebSocket(deps *HandlerDeps) gin.HandlerFunc {
 				UserEmail:  agentClaims.Email,
 				UserName:   user.Name,
 				Role:       agentClaims.Role,
+				InboxIDs:   inboxIDs,
 			}
 
 		case "widget":
@@ -77,6 +89,8 @@ func HandleWebSocket(deps *HandlerDeps) gin.HandlerFunc {
 				Send:           make(chan []byte, 256),
 				Channels:       make(map[string]bool),
 				ContactInboxID: ci.ContactID,
+				ContactID:      ci.ContactID,
+				InboxID:        ci.InboxID,
 			}
 
 		default:

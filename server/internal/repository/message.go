@@ -51,7 +51,10 @@ func (r *MessageRepository) FindByConversation(convID string, beforeID string, l
 
 	if beforeID != "" {
 		err = r.db.Select(&msgs,
-			"SELECT * FROM messages WHERE conversation_id = $1 AND id < $2 ORDER BY created_at DESC LIMIT $3",
+			`SELECT * FROM messages
+			 WHERE conversation_id = $1
+			   AND created_at < (SELECT created_at FROM messages WHERE id = $2 AND conversation_id = $1)
+			 ORDER BY created_at DESC LIMIT $3`,
 			convID, beforeID, limit,
 		)
 	} else {
@@ -75,7 +78,10 @@ func (r *MessageRepository) FindByConversation(convID string, beforeID string, l
 func (r *MessageRepository) GetAfterID(convID string, lastID string) ([]model.Message, error) {
 	var msgs []model.Message
 	err := r.db.Select(&msgs,
-		"SELECT * FROM messages WHERE conversation_id = $1 AND id > $2 ORDER BY created_at ASC",
+		`SELECT * FROM messages
+		 WHERE conversation_id = $1
+		   AND created_at > (SELECT created_at FROM messages WHERE id = $2 AND conversation_id = $1)
+		 ORDER BY created_at ASC`,
 		convID, lastID,
 	)
 	return msgs, err

@@ -12,9 +12,9 @@ import (
 )
 
 type MessageHandler struct {
-	repo    *repository.MessageRepository
+	repo     *repository.MessageRepository
 	convRepo *repository.ConversationRepository
-	hub     *websocket.Hub
+	hub      *websocket.Hub
 }
 
 func NewMessageHandler(repo *repository.MessageRepository, convRepo *repository.ConversationRepository, hub *websocket.Hub) *MessageHandler {
@@ -40,7 +40,7 @@ func (h *MessageHandler) List(c *gin.Context) {
 }
 
 type createMessageReq struct {
-	Content     string `json:"content" binding:"required"`
+	Content     string `json:"content"`
 	ContentType string `json:"content_type"`
 	FileURL     string `json:"file_url"`
 	FileName    string `json:"file_name"`
@@ -55,6 +55,10 @@ func (h *MessageHandler) Create(c *gin.Context) {
 	var req createMessageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, errcode.InvalidParam)
+		return
+	}
+	if req.Content == "" && req.FileURL == "" {
+		response.ErrorMsg(c, errcode.InvalidParam, "content or file_url is required")
 		return
 	}
 
@@ -91,9 +95,10 @@ func (h *MessageHandler) Create(c *gin.Context) {
 	// Update conversation metadata
 	h.convRepo.OnNewMessage(convID, "user", false)
 
-	// Handle status transitions
-	if conv.Status == "pending" {
-		h.convRepo.UpdateStatus(convID, "open")
+	// Handle status transitions. Agent replies move the conversation into
+	// pending because the next expected action is from the contact.
+	if !msg.Private && conv.Status != "resolved" && conv.Status != "snoozed" {
+		h.convRepo.UpdateStatus(convID, "pending")
 	}
 
 	// Broadcast to subscribers

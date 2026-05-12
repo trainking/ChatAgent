@@ -68,7 +68,7 @@ export function mount(container?: HTMLElement) {
   style.textContent = css.replace(/v-bind/g, s.brandColor)
   shadow.append(style)
 
-  if (s.mode === 'bubble') {
+  if (s.mode === 'bubble' || s.mode === 'bubble-left') {
     renderBubble()
   } else {
     renderWindow()
@@ -77,14 +77,18 @@ export function mount(container?: HTMLElement) {
   root.appendChild(host)
 
   unsub = onStoreChange(() => {
-    if (shadow && s.mode === 'bubble') {
-      const existing = shadow.querySelector('.window')
-      if (existing || s.open) {
-        shadow.innerHTML = ''
-        shadow.append(style.cloneNode(true))
-        if (s.open) renderWindow()
-        else renderBubble()
-      }
+    if (!shadow) return
+    const existing = shadow.querySelector('.window')
+    if (s.mode === 'bubble' || s.mode === 'bubble-left') {
+      if (!existing && !s.open) return
+      shadow.innerHTML = ''
+      shadow.append(style.cloneNode(true))
+      if (s.open) renderWindow()
+      else renderBubble()
+    } else {
+      shadow.innerHTML = ''
+      shadow.append(style.cloneNode(true))
+      renderWindow()
     }
   })
 }
@@ -115,7 +119,7 @@ function renderWindow() {
     h('span', { class: 'status' }),
     h('span', { class: 'title' }, s.welcomeTitle || 'Chat'),
   )
-  if (s.mode === 'bubble') {
+  if (s.mode === 'bubble' || s.mode === 'bubble-left') {
     const closeBtn = h('button', { class: 'close-btn' }, '×')
     closeBtn.onclick = () => {
       updateStore({ open: false })
@@ -169,7 +173,7 @@ function renderWindow() {
         updateStore({ formOpen: false })
         form.remove()
         renderInput(win)
-        sendTextMessage(msg)
+        sendTextMessage(msg, { name: nameInput.value.trim(), email: emailInput.value.trim() })
       }
     }
     form.append(nameInput, emailInput, msgInput, sendBtn)
@@ -225,7 +229,7 @@ function renderInput(parent: HTMLElement) {
   parent.append(area)
 }
 
-async function sendTextMessage(text: string) {
+async function sendTextMessage(text: string, visitor?: { name?: string; email?: string }) {
   // Optimistic local echo
   addMessage({
     id: 'local-' + Date.now(),
@@ -247,7 +251,7 @@ async function sendTextMessage(text: string) {
   }
 
   // Send to server
-  const result = await apiSendMessage(text)
+  const result = await apiSendMessage(text, visitor)
   if (result && result.conversationId) {
     updateStore({ conversationId: result.conversationId })
     subscribe(result.conversationId)

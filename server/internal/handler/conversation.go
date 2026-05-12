@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/chatagent/server/internal/model"
 	"github.com/chatagent/server/internal/repository"
@@ -57,21 +58,39 @@ func (h *ConversationHandler) List(c *gin.Context) {
 	req.PageSize, _ = strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
 	filter := repository.ConversationFilter{
-		InboxID:    req.InboxID,
-		Status:     req.Status,
-		Priority:   req.Priority,
-		AssigneeID: req.AssigneeID,
-		Search:     req.Search,
-		Page:       req.Page,
-		PageSize:   req.PageSize,
+		InboxID:        req.InboxID,
+		Status:         req.Status,
+		Priority:       req.Priority,
+		AssigneeID:     req.AssigneeID,
+		AssigneeSelfID: claims.UserID,
+		Search:         req.Search,
+		Page:           req.Page,
+		PageSize:       req.PageSize,
 	}
 
-	if claims.Role == "agent" {
-		if filter.AssigneeID == "me" {
-			// agents can only see their own
+	isAdmin := claims.Role == "admin" || claims.Role == "super_admin"
+	if !isAdmin {
+		inboxes, err := h.inboxRepo.ListByUser(claims.UserID, false)
+		if err != nil {
+			response.Error(c, errcode.DBError)
+			return
+		}
+		inboxIDs := make([]string, 0, len(inboxes))
+		allowed := make(map[string]bool, len(inboxes))
+		for _, inbox := range inboxes {
+			inboxIDs = append(inboxIDs, inbox.ID)
+			allowed[inbox.ID] = true
+		}
+		if filter.InboxID != "" {
+			if !allowed[filter.InboxID] {
+				response.Page(c, 0, []model.Conversation{})
+				return
+			}
 		} else {
-			// agents see only their inboxes' conversations
-			filter.AssigneeID = "" // agents can't filter by other agents
+			filter.InboxIDs = inboxIDs
+		}
+		if filter.AssigneeID != "" && filter.AssigneeID != "me" && filter.AssigneeID != "unassigned" {
+			filter.AssigneeID = "me"
 		}
 	}
 
@@ -84,8 +103,8 @@ func (h *ConversationHandler) List(c *gin.Context) {
 	// Enrich with contact and last message
 	type enrichedConv struct {
 		model.Conversation
-		ContactName  string `json:"contact_name"`
-		ContactEmail string `json:"contact_email"`
+		ContactName  string         `json:"contact_name"`
+		ContactEmail string         `json:"contact_email"`
 		LastMessage  *model.Message `json:"last_message"`
 	}
 
@@ -182,7 +201,7 @@ func (h *ConversationHandler) Assign(c *gin.Context) {
 }
 
 type statusReq struct {
-	Status      string `json:"status"`
+	Status       string `json:"status"`
 	SnoozedUntil *int64 `json:"snoozed_until"`
 }
 
@@ -208,7 +227,13 @@ func (h *ConversationHandler) ChangeStatus(c *gin.Context) {
 
 	oldStatus := conv.Status
 
-	if err := h.repo.UpdateStatus(id, req.Status); err != nil {
+	if req.Status == "snoozed" && req.SnoozedUntil != nil {
+		t := time.Unix(*req.SnoozedUntil, 0)
+		if err := h.repo.UpdateSnoozedUntil(id, t); err != nil {
+			response.Error(c, errcode.DBError)
+			return
+		}
+	} else if err := h.repo.UpdateStatus(id, req.Status); err != nil {
 		response.Error(c, errcode.DBError)
 		return
 	}

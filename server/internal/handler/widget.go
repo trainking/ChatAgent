@@ -14,13 +14,13 @@ import (
 )
 
 type WidgetHandler struct {
-	db                *sqlx.DB
-	inboxRepo         *repository.InboxRepository
-	contactRepo       *repository.ContactRepository
-	contactInboxRepo  *repository.ContactInboxRepository
-	convRepo          *repository.ConversationRepository
-	msgRepo           *repository.MessageRepository
-	hub               *websocket.Hub
+	db               *sqlx.DB
+	inboxRepo        *repository.InboxRepository
+	contactRepo      *repository.ContactRepository
+	contactInboxRepo *repository.ContactInboxRepository
+	convRepo         *repository.ConversationRepository
+	msgRepo          *repository.MessageRepository
+	hub              *websocket.Hub
 }
 
 func NewWidgetHandler(
@@ -159,28 +159,15 @@ func (h *WidgetHandler) SendMessage(c *gin.Context) {
 	}
 
 	// Update contact name/email if provided
-	if req.Name != "" && contact.Name == "" || (req.Name != "" && contact.Name[:2] == "V_") {
+	if req.Name != "" && (contact.Name == "" || isVisitorName(contact.Name)) {
 		h.contactRepo.Update(contact.ID, map[string]interface{}{"name": req.Name})
 	}
 	if req.Email != "" && contact.Email == "" {
 		h.contactRepo.Update(contact.ID, map[string]interface{}{"email": req.Email})
 	}
 
-	// Find open conversation for this contact+inbox, or create a new one
-	var conv *model.Conversation
-	convs, _, err := h.convRepo.List(repository.ConversationFilter{
-		InboxID:  ci.InboxID,
-		Page:     1,
-		PageSize: 1,
-	})
-	if err == nil {
-		for _, c := range convs {
-			if c.ContactID == ci.ContactID && c.Status != "resolved" && c.Status != "closed" {
-				conv = &c
-				break
-			}
-		}
-	}
+	// Find the latest active conversation for this contact+inbox, or create a new one.
+	conv, _ := h.convRepo.FindActiveByContactInbox(ci.ContactID, ci.InboxID)
 
 	if conv == nil {
 		conv = &model.Conversation{
@@ -194,6 +181,12 @@ func (h *WidgetHandler) SendMessage(c *gin.Context) {
 			response.Error(c, errcode.DBError)
 			return
 		}
+	} else if conv.Status == "resolved" {
+		if err := h.convRepo.ReopenFromResolved(conv.ID); err != nil {
+			response.Error(c, errcode.DBError)
+			return
+		}
+		conv.Status = "open"
 	}
 
 	// Create message
@@ -223,6 +216,7 @@ func (h *WidgetHandler) SendMessage(c *gin.Context) {
 		"contact_name":    contact.Name,
 	})
 	h.hub.Broadcast("inbox:"+ci.InboxID, "message.created", msg)
+	h.hub.Broadcast("conversation:"+conv.ID, "message.created", msg)
 
 	response.Success(c, gin.H{
 		"conversation_id": conv.ID,
@@ -235,4 +229,8 @@ func truncateSubject(content string, maxLen int) string {
 		return content
 	}
 	return content[:maxLen] + "..."
+}
+
+func isVisitorName(name string) bool {
+	return len(name) >= 2 && name[:2] == "V_"
 }

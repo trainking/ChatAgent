@@ -10,8 +10,9 @@ export function connectWS() {
   const s = getStore()
   if (!s.pubsubToken) return
 
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const url = `${proto}//${location.host}/ws?token=${s.pubsubToken}&type=widget`
+  const base = new URL(s.baseUrl || location.origin)
+  const proto = base.protocol === 'https:' ? 'wss:' : 'ws:'
+  const url = `${proto}//${base.host}/ws?token=${s.pubsubToken}&type=widget`
   socket = new WebSocket(url)
 
   socket.onopen = () => {
