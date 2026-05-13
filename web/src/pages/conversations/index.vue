@@ -3,25 +3,51 @@
     <!-- Left Panel: Conversation List -->
     <div class="conv-list-panel">
       <div class="panel-header">
-        <span class="panel-title">{{ $t('conversation.title') }}</span>
+        <div class="panel-heading">
+          <span class="panel-title">{{ $t('conversation.title') }}</span>
+          <el-select v-model="filterStatus" size="small" class="status-select" @change="fetchList">
+            <el-option :label="$t('conversation.statusOpen')" value="open" />
+            <el-option :label="$t('conversation.statusPending')" value="pending" />
+            <el-option :label="$t('conversation.statusResolved')" value="resolved" />
+            <el-option :label="$t('conversation.statusSnoozed')" value="snoozed" />
+          </el-select>
+        </div>
+        <div class="panel-actions">
+          <el-select
+            v-model="filterInbox"
+            :placeholder="$t('conversation.filterInbox')"
+            size="small"
+            clearable
+            class="inbox-filter"
+            @change="fetchList"
+          >
+            <template #prefix>
+              <el-icon><Filter /></el-icon>
+            </template>
+            <el-option v-for="ib in inboxes" :key="ib.id" :label="ib.name" :value="ib.id" />
+          </el-select>
+          <el-button circle size="small" class="icon-btn" @click="toggleSort">
+            <el-icon><Sort /></el-icon>
+          </el-button>
+          <el-button circle size="small" class="icon-btn">
+            <el-icon><Right /></el-icon>
+          </el-button>
+        </div>
       </div>
 
       <!-- Filters -->
-      <div class="panel-filters">
-        <el-select v-model="filterInbox" :placeholder="$t('conversation.filterInbox')" size="small" clearable @change="fetchList">
-          <el-option v-for="ib in inboxes" :key="ib.id" :label="ib.name" :value="ib.id" />
-        </el-select>
-        <el-select v-model="filterStatus" :placeholder="$t('conversation.filterStatus')" size="small" clearable @change="fetchList">
-          <el-option :label="$t('conversation.statusOpen')" value="open" />
-          <el-option :label="$t('conversation.statusPending')" value="pending" />
-          <el-option :label="$t('conversation.statusResolved')" value="resolved" />
-          <el-option :label="$t('conversation.statusSnoozed')" value="snoozed" />
-        </el-select>
-        <el-select v-model="filterAssignee" :placeholder="$t('conversation.filterAssignee')" size="small" clearable @change="fetchList">
-          <el-option :label="$t('conversation.assigneeAll')" value="" />
-          <el-option :label="$t('conversation.assigneeMe')" value="me" />
-          <el-option :label="$t('conversation.assigneeUnassigned')" value="unassigned" />
-        </el-select>
+      <div class="assignment-tabs">
+        <button
+          v-for="tab in assignmentTabs"
+          :key="tab.value"
+          type="button"
+          class="assignment-tab"
+          :class="{ active: filterAssignee === tab.value }"
+          @click="setAssigneeFilter(tab.value)"
+        >
+          <span>{{ tab.label }}</span>
+          <span class="tab-count">{{ tab.count }}</span>
+        </button>
       </div>
 
       <!-- List -->
@@ -39,23 +65,26 @@
           :class="{ active: selectedId === conv.id, unread: conv.unread_count > 0 }"
           @click="selectConversation(conv)"
         >
+          <div class="conv-avatar">{{ avatarText(conv) }}</div>
           <div class="conv-item-main">
+            <div class="conv-inbox">
+              <el-icon><ChatDotRound /></el-icon>
+              <span>{{ inboxName(conv.inbox_id) }}</span>
+            </div>
             <div class="conv-item-header">
-              <span class="conv-contact">{{ conv.contact_name || conv.contact_email || `#${conv.display_id}` }}</span>
-              <span class="conv-time">{{ formatTime(conv.last_message_at) }}</span>
+              <span class="conv-contact">{{ conversationTitle(conv) }}</span>
             </div>
             <div class="conv-item-preview">
+              <el-icon v-if="isPictureMessage(conv)" class="preview-icon"><Picture /></el-icon>
               <span class="conv-preview-text">{{ getPreview(conv) }}</span>
-              <el-badge v-if="conv.unread_count > 0" :value="conv.unread_count" class="conv-badge" />
             </div>
           </div>
-          <div class="conv-item-meta">
-            <el-tag :type="statusTagType(conv.status)" size="small" effect="dark">
-              {{ statusLabel(conv.status) }}
-            </el-tag>
-            <el-tag v-if="conv.priority !== 'medium'" :type="priorityTagType(conv.priority)" size="small">
-              {{ priorityLabel(conv.priority) }}
-            </el-tag>
+          <div class="conv-side-meta">
+            <span class="conv-time">{{ formatTime(conv.last_message_at) }}</span>
+            <span class="assignee-state" :class="assignmentClass(conv)">
+              {{ assignmentLabel(conv) }}
+            </span>
+            <el-badge v-if="conv.unread_count > 0" :value="conv.unread_count" class="conv-badge" />
           </div>
         </div>
       </div>
@@ -144,27 +173,63 @@
 
       <!-- Input -->
       <div class="input-area">
-        <el-checkbox v-model="isPrivateNote" size="small" class="private-toggle">
-          {{ $t('conversation.privateNote') }}
-        </el-checkbox>
-        <div class="input-row">
-          <el-upload
-            class="file-upload-btn"
-            :show-file-list="false"
-            :http-request="handleUpload"
-            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-          >
-            <el-button circle size="small"><el-icon><Link /></el-icon></el-button>
-          </el-upload>
+        <div class="composer">
           <el-input
+            ref="inputRef"
             v-model="inputText"
+            type="textarea"
+            :autosize="{ minRows: 2, maxRows: 6 }"
             :placeholder="$t('conversation.inputPlaceholder')"
-            @keyup.enter.exact="sendText"
+            resize="none"
+            @keydown.ctrl.enter.prevent="sendText"
             class="msg-input"
           />
-          <el-button type="primary" size="small" @click="sendText" :loading="sending">
-            {{ $t('conversation.send') }}
-          </el-button>
+          <div class="composer-toolbar">
+            <div class="composer-tools">
+              <el-upload
+                class="file-upload-btn"
+                :show-file-list="false"
+                :http-request="handleUpload"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+              >
+                <el-button circle text class="composer-icon-btn">
+                  <el-icon><Link /></el-icon>
+                </el-button>
+              </el-upload>
+              <el-popover
+                placement="top-start"
+                trigger="click"
+                width="280"
+                popper-class="emoji-popover"
+              >
+                <div class="emoji-grid">
+                  <button
+                    v-for="emoji in emojis"
+                    :key="emoji"
+                    type="button"
+                    class="emoji-option"
+                    @click="insertEmoji(emoji)"
+                  >
+                    {{ emoji }}
+                  </button>
+                </div>
+                <template #reference>
+                  <el-button circle text class="composer-icon-btn">
+                    <el-icon><Sunny /></el-icon>
+                  </el-button>
+                </template>
+              </el-popover>
+            </div>
+            <el-button
+              circle
+              class="send-icon-btn"
+              :disabled="!canSend"
+              :loading="sending"
+              @click="sendText"
+            >
+              <el-icon><Top /></el-icon>
+            </el-button>
+          </div>
         </div>
       </div>
 
@@ -209,7 +274,7 @@ const ws = useWebSocket()
 
 // Filter state
 const filterInbox = ref('')
-const filterStatus = ref('')
+const filterStatus = ref('open')
 const filterAssignee = ref('')
 const inboxes = ref<{ id: string; name: string }[]>([])
 
@@ -219,13 +284,14 @@ const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const newestFirst = ref(true)
 
 // Detail state
 const selectedId = ref<string | null>(null)
 const selectedConv = ref<ConversationItem | null>(null)
 const inputText = ref('')
+const inputRef = ref<any>(null)
 const sending = ref(false)
-const isPrivateNote = ref(false)
 const showSidebar = ref(false)
 const msgContainerRef = ref<HTMLElement | null>(null)
 const loadingMore = ref(false)
@@ -238,6 +304,19 @@ import type { ConversationItem } from '@/stores/conversations'
 // Computed
 const currentMessages = computed(() => selectedId.value ? msgStore.getMessages(selectedId.value) : [])
 const typingNames = computed(() => selectedId.value ? msgStore.getTyping(selectedId.value) : [])
+const inboxNameMap = computed(() => new Map(inboxes.value.map((ib) => [ib.id, ib.name])))
+const canSend = computed(() => inputText.value.trim().length > 0 && !sending.value)
+const assignmentTabs = computed(() => [
+  { label: (t as any)('conversation.assigneeMe'), value: 'me', count: convs.value.filter((conv) => isMine(conv)).length },
+  { label: (t as any)('conversation.assigneeUnassigned'), value: 'unassigned', count: convs.value.filter((conv) => !conv.assignee_id).length },
+  { label: (t as any)('conversation.assigneeAll'), value: '', count: total.value || convs.value.length },
+])
+const emojis = [
+  '😀', '😄', '😊', '😍', '😘', '😎', '🥳', '🤔',
+  '😅', '😂', '🙂', '🙌', '👍', '👎', '👏', '🙏',
+  '💪', '🔥', '✨', '🎉', '❤️', '💙', '✅', '⭐',
+  '📌', '📎', '💬', '📷', '🚀', '☕', '🌟', '😢',
+]
 
 async function fetchInboxes() {
   try {
@@ -262,9 +341,64 @@ async function fetchList() {
 
 function getPreview(conv: ConversationItem) {
   if (conv.last_message?.private) return `[${(t as any)('conversation.privateNote')}]`
-  const text = conv.last_message?.content || ''
+  if (isPictureMessage(conv) && !conv.last_message?.content) return (t as any)('conversation.pictureMessage')
+  const text = stripHtml(conv.last_message?.content || '')
   if (text.length > 50) return text.substring(0, 50) + '...'
-  return text
+  return text || conv.subject || `#${conv.display_id}`
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function inboxName(inboxId: string) {
+  return inboxNameMap.value.get(inboxId) || (t as any)('conversation.unknownInbox')
+}
+
+function conversationTitle(conv: ConversationItem) {
+  return conv.contact_name || conv.contact_email || conv.subject || `#${conv.display_id}`
+}
+
+function avatarText(conv: ConversationItem) {
+  const source = conv.contact_name || conv.contact_email || String(conv.display_id)
+  const trimmed = stripHtml(source).trim()
+  if (!trimmed) return '#'
+  if (/^\d+$/.test(trimmed)) return trimmed.slice(-1)
+  const parts = trimmed.split(/[\s._-]+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return trimmed.slice(0, 1).toUpperCase()
+}
+
+function isMine(conv: ConversationItem) {
+  return !!conv.assignee_id && conv.assignee_id === userStore.user?.id
+}
+
+function assignmentLabel(conv: ConversationItem) {
+  if (!conv.assignee_id) return (t as any)('conversation.assigneeUnassigned')
+  if (isMine(conv)) return (t as any)('conversation.assigneeMe')
+  return conv.assignee_name || conv.assignee_email || (t as any)('conversation.assigneeAssigned')
+}
+
+function assignmentClass(conv: ConversationItem) {
+  if (!conv.assignee_id) return 'unassigned'
+  if (isMine(conv)) return 'mine'
+  return 'assigned'
+}
+
+function isPictureMessage(conv: ConversationItem) {
+  const msg = conv.last_message as any
+  return !!msg?.file_url && String(msg.content_type || '').startsWith('image/')
+}
+
+function setAssigneeFilter(value: string) {
+  filterAssignee.value = value
+  page.value = 1
+  fetchList()
+}
+
+function toggleSort() {
+  newestFirst.value = !newestFirst.value
+  convs.value = [...convs.value].reverse()
 }
 
 function formatTime(time: string) {
@@ -388,16 +522,32 @@ function handleScroll() {
 }
 
 async function sendText() {
-  if (!inputText.value.trim() || !selectedId.value) return
+  if (!canSend.value || !selectedId.value) return
   sending.value = true
   try {
     await sendMessage(selectedId.value, {
       content: inputText.value,
       content_type: 'text/html',
-      private: isPrivateNote.value,
+      private: false,
     })
     inputText.value = ''
   } catch { ElMessage.error(t('common.error')) } finally { sending.value = false }
+}
+
+function insertEmoji(emoji: string) {
+  const textarea = inputRef.value?.textarea as HTMLTextAreaElement | undefined
+  if (!textarea) {
+    inputText.value += emoji
+    return
+  }
+  const start = textarea.selectionStart ?? inputText.value.length
+  const end = textarea.selectionEnd ?? inputText.value.length
+  inputText.value = inputText.value.slice(0, start) + emoji + inputText.value.slice(end)
+  nextTick(() => {
+    textarea.focus()
+    const cursor = start + emoji.length
+    textarea.setSelectionRange(cursor, cursor)
+  })
 }
 
 async function handleUpload(uploadReq: { file: File }) {
@@ -411,7 +561,7 @@ async function handleUpload(uploadReq: { file: File }) {
       file_url: data.url,
       file_name: data.name,
       file_size: data.size,
-      private: isPrivateNote.value,
+      private: false,
     })
   } catch {}
 }
@@ -498,6 +648,8 @@ watch(() => route.params.id, async (id) => {
           snoozed_until: detail.snoozed_until,
           contact_name: detail.contact?.name || '',
           contact_email: detail.contact?.email || '',
+          assignee_name: detail.assignee?.name || '',
+          assignee_email: detail.assignee?.email || '',
           created_at: detail.created_at || '',
           updated_at: detail.updated_at || '',
           last_message: null,
@@ -530,13 +682,12 @@ onMounted(async () => {
 <style scoped lang="scss">
 .conversations-page {
   display: flex;
-  height: calc(100vh - 80px);
-  gap: 1px;
-  background: #dcdfe6;
+  height: 100vh;
+  background: #ffffff;
 }
 
 .conv-list-panel {
-  width: 340px;
+  width: 390px;
   min-width: 280px;
   background: #fff;
   display: flex;
@@ -545,18 +696,105 @@ onMounted(async () => {
 }
 
 .panel-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #ebeef5;
-  .panel-title { font-size: 16px; font-weight: 600; }
+  padding: 12px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+  }
 }
 
-.panel-filters {
-  padding: 8px 12px;
+.panel-heading,
+.panel-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.status-select {
+  width: 76px;
+}
+
+.inbox-filter {
+  width: 34px;
+
+  :deep(.el-input__wrapper) {
+    width: 34px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    box-shadow: none;
+  }
+
+  :deep(.el-input__inner),
+  :deep(.el-select__caret) {
+    display: none;
+  }
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.assignment-tabs {
+  padding: 6px 12px 8px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
   border-bottom: 1px solid #ebeef5;
-  .el-select { width: calc(50% - 3px); }
+}
+
+.assignment-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &.active {
+    color: #2563eb;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -9px;
+      height: 2px;
+      background: #2563eb;
+      border-radius: 2px;
+    }
+  }
+}
+
+.tab-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
 }
 
 .conv-list {
@@ -565,31 +803,128 @@ onMounted(async () => {
 }
 
 .conv-item {
-  padding: 10px 16px;
-  border-bottom: 1px solid #f2f3f5;
+  position: relative;
+  display: flex;
+  gap: 10px;
+  min-height: 86px;
+  padding: 12px 12px;
+  border-bottom: 1px solid #eef0f3;
   cursor: pointer;
-  &:hover { background: #f5f7fa; }
-  &.active { background: #ecf5ff; border-left: 3px solid #409eff; padding-left: 13px; }
-  &.unread { font-weight: 600; }
+
+  &:hover { background: #f7f8fa; }
+  &.active { background: #f3f4f6; }
+  &.unread .conv-contact { font-weight: 700; }
+}
+
+.conv-avatar {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  margin-top: 22px;
+  border-radius: 50%;
+  background: #dfe7ff;
+  color: #3b64d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.conv-item-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.conv-inbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  color: #6b7280;
+  font-size: 13px;
+
+  .el-icon {
+    font-size: 13px;
+    color: #4b5563;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .conv-item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
-  .conv-contact { font-size: 14px; }
-  .conv-time { font-size: 12px; color: #909399; }
+  margin-bottom: 5px;
+
+  .conv-contact {
+    min-width: 0;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .conv-item-preview {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  .conv-preview-text { font-size: 12px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+  gap: 4px;
+  min-width: 0;
+
+  .conv-preview-text {
+    min-width: 0;
+    color: #6b7280;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
-.conv-item-meta { display: flex; gap: 4px; margin-top: 4px; }
+.preview-icon {
+  flex: 0 0 auto;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.conv-side-meta {
+  flex: 0 0 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  padding-top: 24px;
+}
+
+.conv-time {
+  color: #6b7280;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.assignee-state {
+  max-width: 72px;
+  color: #64748b;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.mine { color: #2563eb; }
+  &.unassigned { color: #b45309; }
+}
+
+.conv-badge {
+  line-height: 1;
+}
 
 .panel-footer { padding: 8px; text-align: center; border-top: 1px solid #ebeef5; }
 
@@ -659,12 +994,103 @@ onMounted(async () => {
 .typing-indicator { padding: 4px 16px; font-size: 12px; color: #909399; font-style: italic; }
 
 .input-area {
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-top: 1px solid #ebeef5;
+  background: #fff;
 }
-.input-row { display: flex; gap: 8px; align-items: center; }
-.msg-input { flex: 1; }
-.private-toggle { margin-bottom: 6px; }
+
+.composer {
+  border: 1px solid #dcdfe6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus-within {
+    border-color: #409eff;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.12);
+  }
+}
+
+.msg-input {
+  :deep(.el-textarea__inner) {
+    min-height: 46px !important;
+    padding: 2px 4px 8px;
+    border: 0;
+    box-shadow: none;
+    color: #111827;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.composer-icon-btn {
+  width: 28px;
+  height: 28px;
+  color: #6b7280;
+
+  &:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+}
+
+.send-icon-btn {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: #0d6efd;
+  color: #fff;
+
+  &:hover,
+  &:focus {
+    background: #0b5ed7;
+    color: #fff;
+  }
+
+  &.is-disabled,
+  &.is-disabled:hover,
+  &.is-disabled:focus {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.emoji-option {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 18px;
+  line-height: 28px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+}
 
 .detail-sidebar {
   position: absolute;

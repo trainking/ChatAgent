@@ -103,9 +103,11 @@ func (h *ConversationHandler) List(c *gin.Context) {
 	// Enrich with contact and last message
 	type enrichedConv struct {
 		model.Conversation
-		ContactName  string         `json:"contact_name"`
-		ContactEmail string         `json:"contact_email"`
-		LastMessage  *model.Message `json:"last_message"`
+		ContactName   string         `json:"contact_name"`
+		ContactEmail  string         `json:"contact_email"`
+		AssigneeName  string         `json:"assignee_name"`
+		AssigneeEmail string         `json:"assignee_email"`
+		LastMessage   *model.Message `json:"last_message"`
 	}
 
 	result := make([]enrichedConv, 0, len(convs))
@@ -117,6 +119,12 @@ func (h *ConversationHandler) List(c *gin.Context) {
 		}
 		if msg, err := h.msgRepo.GetLastMessage(conv.ID); err == nil {
 			ec.LastMessage = msg
+		}
+		if conv.AssigneeID != nil {
+			if user, err := h.userRepo.FindByID(*conv.AssigneeID); err == nil {
+				ec.AssigneeName = user.Name
+				ec.AssigneeEmail = user.Email
+			}
 		}
 		result = append(result, ec)
 	}

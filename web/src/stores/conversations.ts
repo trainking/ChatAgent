@@ -20,11 +20,15 @@ export interface ConversationItem {
   updated_at: string
   contact_name: string
   contact_email: string
+  assignee_name?: string
+  assignee_email?: string
   last_message: {
     id: string
     content: string
     sender_type: string
     message_type: string
+    content_type?: string
+    file_url?: string
     private: boolean
   } | null
 }

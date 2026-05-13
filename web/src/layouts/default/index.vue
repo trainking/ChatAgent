@@ -1,33 +1,36 @@
 <template>
-  <el-container class="pro-layout">
+  <el-container class="pro-layout" :class="{ collapsed }">
     <!-- Sidebar -->
     <el-aside
-      :width="collapsed ? '64px' : '220px'"
+      :width="collapsed ? '64px' : '202px'"
       class="pro-sider"
     >
       <div
         class="pro-logo"
         :class="{ collapsed }"
       >
-        <el-icon :size="24">
+        <div class="brand-mark">
           <ChatDotRound />
-        </el-icon>
+        </div>
         <span
           v-show="!collapsed"
           class="logo-text"
-        >ChatAgent</span>
+        >Admin</span>
       </div>
 
-      <el-scrollbar>
+      <el-scrollbar class="side-scroll">
         <el-menu
           :default-active="route.path"
           :collapse="collapsed"
           :collapse-transition="false"
-          background-color="#001529"
-          text-color="#ffffffa6"
-          active-text-color="#fff"
           router
         >
+          <el-menu-item index="/dashboard/inbox">
+            <el-icon><Message /></el-icon>
+            <template #title>
+              {{ $t('layout.inbox') }}
+            </template>
+          </el-menu-item>
           <el-menu-item index="/dashboard/conversations">
             <el-icon><ChatDotRound /></el-icon>
             <template #title>
@@ -38,12 +41,6 @@
             <el-icon><User /></el-icon>
             <template #title>
               {{ $t('layout.contacts') }}
-            </template>
-          </el-menu-item>
-          <el-menu-item index="/dashboard/inbox">
-            <el-icon><Message /></el-icon>
-            <template #title>
-              {{ $t('layout.inbox') }}
             </template>
           </el-menu-item>
           <el-menu-item
@@ -72,109 +69,79 @@
           </el-sub-menu>
         </el-menu>
       </el-scrollbar>
+
+      <div class="side-footer">
+        <el-dropdown trigger="click" :hide-on-click="false">
+          <span class="user-action" :class="{ collapsed }">
+            <span class="avatar-status-wrap">
+              <el-avatar
+                :size="30"
+                :src="userStore.user?.avatar_url || ''"
+              >
+                {{ userInitial }}
+              </el-avatar>
+              <span class="avatar-status-dot" :class="statusDotClass" />
+            </span>
+            <span v-show="!collapsed" class="user-meta">
+              <span class="user-name">{{ userStore.user?.name || 'User' }}</span>
+              <span class="user-email">{{ userStore.user?.email || '' }}</span>
+            </span>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu class="user-dropdown-menu">
+              <div class="dropdown-select-group" @click.stop>
+                <label class="dropdown-section">{{ $t('layout.onlineStatus') }}</label>
+                <el-select
+                  :model-value="statusDotClass"
+                  size="small"
+                  class="dropdown-select"
+                  :teleported="false"
+                  @change="handleStatusSwitch"
+                >
+                  <el-option value="online" :label="$t('onlineStatus.online')">
+                    <span class="status-dot online" />{{ $t('onlineStatus.online') }}
+                  </el-option>
+                  <el-option value="busy" :label="$t('onlineStatus.busy')">
+                    <span class="status-dot busy" />{{ $t('onlineStatus.busy') }}
+                  </el-option>
+                  <el-option value="offline" :label="$t('onlineStatus.offline')">
+                    <span class="status-dot offline" />{{ $t('onlineStatus.offline') }}
+                  </el-option>
+                </el-select>
+              </div>
+              <div class="dropdown-select-group" @click.stop>
+                <label class="dropdown-section">{{ $t('layout.language') }}</label>
+                <el-select
+                  :model-value="locale"
+                  size="small"
+                  class="dropdown-select"
+                  :teleported="false"
+                  @change="handleLangSwitch"
+                >
+                  <el-option value="zh-CN" :label="$t('lang.zh')" />
+                  <el-option value="en-US" :label="$t('lang.en')" />
+                </el-select>
+              </div>
+              <el-dropdown-item @click="goProfile">
+                <el-icon><User /></el-icon>{{ $t('layout.profile') }}
+              </el-dropdown-item>
+              <el-dropdown-item @click="showPwdDialog = true">
+                <el-icon><Key /></el-icon>{{ $t('layout.changePassword') }}
+              </el-dropdown-item>
+              <el-dropdown-item
+                divided
+                @click="handleLogout"
+              >
+                <el-icon><SwitchButton /></el-icon>{{ $t('layout.logout') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </el-aside>
 
     <!-- Main -->
     <el-container class="pro-main">
-      <!-- Header -->
-      <el-header class="pro-header">
-        <div class="header-left">
-          <el-icon
-            class="collapse-btn"
-            :size="20"
-            @click="collapsed = !collapsed"
-          >
-            <Fold v-if="!collapsed" /><Expand v-else />
-          </el-icon>
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/' }">
-              Home
-            </el-breadcrumb-item>
-            <el-breadcrumb-item v-if="route.matched.length > 1">
-              {{ breadcrumbTitle }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
-        <div class="header-right">
-          <el-dropdown
-            trigger="click"
-            @command="handleStatusSwitch"
-          >
-            <span class="action-item">
-              <span
-                class="status-dot"
-                :class="statusDotClass"
-              />
-              <span>{{ statusLabel }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="online">
-                  <span
-                    class="status-dot online"
-                  />{{ $t('onlineStatus.online') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="busy">
-                  <span
-                    class="status-dot busy"
-                  />{{ $t('onlineStatus.busy') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="offline">
-                  <span
-                    class="status-dot offline"
-                  />{{ $t('onlineStatus.offline') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-
-          <el-dropdown @command="handleLangSwitch">
-            <span class="action-item">
-              <el-icon><Switch /></el-icon>
-              <span>{{ locale === 'zh-CN' ? $t('lang.zh') : $t('lang.en') }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="zh-CN">
-                  <span :class="{ bold: locale === 'zh-CN' }">{{ $t('lang.zh') }}</span>
-                </el-dropdown-item>
-                <el-dropdown-item command="en-US">
-                  <span :class="{ bold: locale === 'en-US' }">{{ $t('lang.en') }}</span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-
-          <el-dropdown>
-            <span class="action-item user-action">
-              <el-avatar
-                :size="28"
-                :src="userStore.user?.avatar_url || ''"
-              >
-                <el-icon><UserFilled /></el-icon>
-              </el-avatar>
-              <span class="user-name">{{ userStore.user?.name || 'User' }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="goProfile">
-                  <el-icon><User /></el-icon>{{ $t('layout.profile') }}
-                </el-dropdown-item>
-                <el-dropdown-item @click="showPwdDialog = true">
-                  <el-icon><Key /></el-icon>{{ $t('layout.changePassword') }}
-                </el-dropdown-item>
-                <el-dropdown-item
-                  divided
-                  @click="handleLogout"
-                >
-                  <el-icon><SwitchButton /></el-icon>{{ $t('layout.logout') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-header>
-
       <!-- Content -->
       <el-main class="pro-content">
         <router-view />
@@ -251,16 +218,8 @@ const router = useRouter()
 const userStore = useUserStore()
 const collapsed = ref(false)
 
-const breadcrumbTitle = computed(() => {
-  const meta = route.matched[route.matched.length - 1]?.meta || {}
-  return (meta.title as string) || route.name || ''
-})
-
 const statusDotClass = computed(() => userStore.user?.online_status || 'offline')
-const statusLabel = computed(() => {
-  const s = userStore.user?.online_status || 'offline'
-  return (t as any)(`onlineStatus.${s}`)
-})
+const userInitial = computed(() => (userStore.user?.name || userStore.user?.email || 'U').slice(0, 1).toUpperCase())
 
 async function handleStatusSwitch(status: string) {
   try {
@@ -314,90 +273,230 @@ function handleLangSwitch(lang: string) { locale.value = lang; localStorage.setI
 </script>
 
 <style scoped lang="scss">
-.pro-layout { height: 100vh; }
+.pro-layout {
+  height: 100vh;
+  background: #ffffff;
+  color: #111827;
+}
 
 .pro-sider {
-  background: #001529;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
   transition: width 0.2s;
   overflow: hidden;
+
   .pro-logo {
-    height: 48px;
-    margin: 16px;
-    border-radius: 6px;
+    height: 42px;
+    padding: 0 8px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #111827;
+    overflow: hidden;
+
+    &.collapsed {
+      justify-content: center;
+      padding: 0;
+
+    }
+  }
+
+  .brand-mark {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
-    transition: all 0.2s;
-    &.collapsed { margin: 16px 12px; }
-    .logo-text { font-size: 16px; font-weight: 600; white-space: nowrap; }
+
+    :deep(svg) {
+      width: 10px;
+      height: 10px;
+      stroke-width: 4;
+    }
   }
-  .el-menu { border-right: none; }
+
+  .logo-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .el-menu {
+    border-right: none;
+    padding: 6px 8px;
+    background: transparent;
+  }
+
+  :deep(.el-menu-item),
+  :deep(.el-sub-menu__title) {
+    height: 36px;
+    margin: 3px 0;
+    padding: 0 10px !important;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 14px;
+    line-height: 36px;
+  }
+
+  :deep(.el-menu-item .el-icon),
+  :deep(.el-sub-menu__title .el-icon) {
+    color: #6b7280;
+  }
+
+  :deep(.el-menu-item:hover),
+  :deep(.el-sub-menu__title:hover) {
+    background: #f7f8fa;
+    color: #111827;
+  }
+
+  :deep(.el-menu-item.is-active) {
+    background: #f2f4f7;
+    color: #006adc;
+    font-weight: 700;
+  }
+
+  :deep(.el-menu-item.is-active .el-icon) {
+    color: #006adc;
+  }
 }
 
-.pro-main { flex-direction: column; min-width: 0; }
+.side-scroll {
+  flex: 1;
+  min-height: 0;
+}
 
-.pro-header {
-  height: 48px !important;
-  background: #fff;
+.side-footer {
+  padding: 9px 8px;
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.user-action {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  z-index: 10;
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.user-action {
+  gap: 8px;
+  min-height: 40px;
+  padding: 5px 4px;
+
+  &:hover {
+    background: #f7f8fa;
   }
-  .collapse-btn {
-    cursor: pointer;
-    color: #606266;
-    &:hover { color: #409eff; }
+
+  &.collapsed {
+    justify-content: center;
+    padding: 5px 0;
   }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .action-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    color: #606266;
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background 0.2s;
-    &:hover { background: #f5f5f5; }
-  }
-  .user-action { padding: 2px 8px 2px 4px; }
-  .user-name { margin-left: 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+.avatar-status-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.avatar-status-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #9ca3af;
+
+  &.online { background: #10b981; }
+  &.offline { background: #9ca3af; }
+  &.busy { background: #f59e0b; }
+}
+
+.user-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.user-name,
+.user-email {
+  max-width: 136px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-name {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.user-email {
+  margin-top: 3px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.pro-main {
+  flex-direction: column;
+  min-width: 0;
+  background: #ffffff;
 }
 
 .pro-content {
-  background: #f0f2f5;
-  padding: 16px;
-  height: calc(100vh - 48px);
-  overflow-y: auto;
+  height: 100vh;
+  padding: 0;
+  overflow: auto;
+  background: #ffffff;
 }
 
-.bold { font-weight: 700; }
+.dropdown-section {
+  display: block;
+  margin-bottom: 6px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dropdown-select-group {
+  min-width: 196px;
+  padding: 8px 12px;
+
+  & + & {
+    border-top: 1px solid #f1f2f4;
+  }
+}
+
+.dropdown-select {
+  width: 100%;
+}
 
 .status-dot {
   display: inline-block;
+  flex: 0 0 auto;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-right: 4px;
-  background: #909399;
-  &.online { background: #67c23a; }
-  &.offline { background: #909399; }
-  &.busy { background: #e6a23c; }
+  margin-right: 6px;
+  background: #9ca3af;
+  box-shadow: 0 0 0 2px #ffffff;
+
+  &.online { background: #10b981; }
+  &.offline { background: #9ca3af; }
+  &.busy { background: #f59e0b; }
 }
 </style>
