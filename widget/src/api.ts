@@ -16,9 +16,10 @@ export async function widgetAuth(fingerprint?: string): Promise<boolean> {
       pubsubToken: json.data.pubsub_token,
       contactId: json.data.contact_id,
       contactInboxId: json.data.contact_inbox_id,
+      icon: json.data.icon || '',
       welcomeTitle: json.data.welcome_title || '',
       welcomeMessage: json.data.welcome_message || '',
-      preChat: !!(json.data.welcome_title || json.data.welcome_message),
+      preChat: !!(json.data.welcome_title || json.data.welcome_message || json.data.icon),
     })
     return true
   } catch {

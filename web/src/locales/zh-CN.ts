@@ -130,6 +130,8 @@ export default {
     type: '类型',
     description: '概述',
     descriptionPlaceholder: '请输入信箱描述',
+    icon: 'Icon',
+    iconPlaceholder: '请输入图片 URL 或短文本标识',
     welcomeTitle: '欢迎标题',
     welcomeTitlePlaceholder: '最多32个字符',
     welcomeMessage: '欢迎语',

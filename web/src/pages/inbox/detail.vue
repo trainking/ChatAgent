@@ -35,6 +35,13 @@
                 :placeholder="$t('inbox.descriptionPlaceholder')"
               />
             </el-form-item>
+            <el-form-item :label="$t('inbox.icon')">
+              <el-input
+                v-model="editForm.icon"
+                :placeholder="$t('inbox.iconPlaceholder')"
+                maxlength="500"
+              />
+            </el-form-item>
             <el-form-item :label="$t('inbox.welcomeTitle')">
               <el-input
                 v-model="editForm.welcome_title"
@@ -141,6 +148,7 @@ interface InboxItem {
   id: string
   name: string
   description: string
+  icon: string
   welcome_title: string
   welcome_message: string
   inbox_type: string
@@ -166,6 +174,7 @@ const editFormRef = ref<FormInstance>()
 
 const editForm = reactive({
   description: '',
+  icon: '',
   welcome_title: '',
   welcome_message: '',
   collaborators: [] as string[],
@@ -208,6 +217,7 @@ async function fetchDetail() {
     const res = await getInbox(route.params.id as string)
     detailInbox.value = res.data
     editForm.description = res.data.description || ''
+    editForm.icon = res.data.icon || ''
     editForm.welcome_title = res.data.welcome_title || ''
     editForm.welcome_message = res.data.welcome_message || ''
     editForm.collaborators = (res.data.collaborators || []).map((c: any) => c.id)
@@ -228,6 +238,7 @@ async function handleUpdate() {
   try {
     await updateInbox(detailInbox.value.id, {
       description: editForm.description,
+      icon: editForm.icon,
       welcome_title: editForm.welcome_title,
       welcome_message: editForm.welcome_message,
       status: editFormStatusEnabled.value ? 'enabled' : 'disabled',

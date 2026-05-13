@@ -9,6 +9,7 @@ const pendingMessages: string[] = []
 export function connectWS() {
   const s = getStore()
   if (!s.pubsubToken) return
+  if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) return
 
   const base = new URL(s.baseUrl || location.origin)
   const proto = base.protocol === 'https:' ? 'wss:' : 'ws:'

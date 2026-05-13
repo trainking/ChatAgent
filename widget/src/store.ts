@@ -5,6 +5,7 @@ export interface Store {
   pubsubToken: string | null
   contactId: string | null
   contactInboxId: string | null
+  icon: string
   welcomeTitle: string
   welcomeMessage: string
   brandColor: string
@@ -14,6 +15,8 @@ export interface Store {
   connected: boolean
   open: boolean
   formOpen: boolean
+  visitorName: string
+  introSubmitted: boolean
 }
 
 export interface Message {
@@ -35,6 +38,7 @@ let store: Store = {
   pubsubToken: null,
   contactId: null,
   contactInboxId: null,
+  icon: '',
   welcomeTitle: '',
   welcomeMessage: '',
   brandColor: '#409EFF',
@@ -44,6 +48,8 @@ let store: Store = {
   connected: false,
   open: false,
   formOpen: true,
+  visitorName: '',
+  introSubmitted: false,
 }
 
 const listeners: Set<() => void> = new Set()

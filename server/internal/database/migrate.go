@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS inboxes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT DEFAULT '',
+    icon VARCHAR(500) DEFAULT '',
     welcome_title VARCHAR(32) DEFAULT '',
     welcome_message TEXT DEFAULT '',
     inbox_type VARCHAR(20) NOT NULL CHECK (inbox_type IN ('website', 'api')),
@@ -259,6 +260,8 @@ CREATE TABLE IF NOT EXISTS inboxes (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE inboxes ADD COLUMN IF NOT EXISTS icon VARCHAR(500) DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS inbox_collaborators (
     inbox_id UUID NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,

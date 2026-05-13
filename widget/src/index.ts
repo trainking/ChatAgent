@@ -27,11 +27,9 @@ function init(config: WidgetConfig) {
   if (token) {
     updateStore({ pubsubToken: token })
     connectWS()
-    mount()
-    return
   }
 
-  // New visitor — mount with pre-chat form
+  // Mount first, then refresh inbox presentation from auth.
   mount()
 
   // Auto-auth with fingerprint

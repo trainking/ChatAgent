@@ -22,6 +22,7 @@ func NewInboxHandler(repo *repository.InboxRepository, userRepo *repository.User
 type createInboxReq struct {
 	Name           string   `json:"name" binding:"required"`
 	Description    string   `json:"description"`
+	Icon           string   `json:"icon"`
 	WelcomeTitle   string   `json:"welcome_title"`
 	WelcomeMessage string   `json:"welcome_message"`
 	InboxType      string   `json:"inbox_type" binding:"required"`
@@ -31,6 +32,7 @@ type createInboxReq struct {
 
 type updateInboxReq struct {
 	Description    string   `json:"description"`
+	Icon           string   `json:"icon"`
 	WelcomeTitle   string   `json:"welcome_title"`
 	WelcomeMessage string   `json:"welcome_message"`
 	Status         string   `json:"status"`
@@ -99,6 +101,10 @@ func (h *InboxHandler) Create(c *gin.Context) {
 		response.ErrorMsg(c, errcode.InvalidParam, "welcome_title max 32 characters")
 		return
 	}
+	if len(req.Icon) > 500 {
+		response.ErrorMsg(c, errcode.InvalidParam, "icon max 500 characters")
+		return
+	}
 	if len(req.WelcomeMessage) > 255 {
 		response.ErrorMsg(c, errcode.InvalidParam, "welcome_message max 255 characters")
 		return
@@ -122,6 +128,7 @@ func (h *InboxHandler) Create(c *gin.Context) {
 	inbox := &model.Inbox{
 		Name:           req.Name,
 		Description:    req.Description,
+		Icon:           req.Icon,
 		WelcomeTitle:   req.WelcomeTitle,
 		WelcomeMessage: req.WelcomeMessage,
 		InboxType:      req.InboxType,
@@ -180,12 +187,17 @@ func (h *InboxHandler) Update(c *gin.Context) {
 		response.ErrorMsg(c, errcode.InvalidParam, "welcome_title max 32 characters")
 		return
 	}
+	if len(req.Icon) > 500 {
+		response.ErrorMsg(c, errcode.InvalidParam, "icon max 500 characters")
+		return
+	}
 	if len(req.WelcomeMessage) > 255 {
 		response.ErrorMsg(c, errcode.InvalidParam, "welcome_message max 255 characters")
 		return
 	}
 
 	inbox.Description = req.Description
+	inbox.Icon = req.Icon
 	inbox.WelcomeTitle = req.WelcomeTitle
 	inbox.WelcomeMessage = req.WelcomeMessage
 	if req.Status != "" {

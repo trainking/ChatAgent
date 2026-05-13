@@ -135,6 +135,13 @@
             :placeholder="$t('inbox.descriptionPlaceholder')"
           />
         </el-form-item>
+        <el-form-item :label="$t('inbox.icon')">
+          <el-input
+            v-model="createForm.icon"
+            :placeholder="$t('inbox.iconPlaceholder')"
+            maxlength="500"
+          />
+        </el-form-item>
         <el-form-item :label="$t('inbox.welcomeTitle')">
           <el-input
             v-model="createForm.welcome_title"
@@ -204,6 +211,7 @@ interface InboxItem {
   id: string
   name: string
   description: string
+  icon: string
   welcome_title: string
   welcome_message: string
   inbox_type: string
@@ -231,6 +239,7 @@ const createForm = reactive({
   inbox_type: 'website',
   name: '',
   description: '',
+  icon: '',
   welcome_title: '',
   welcome_message: '',
   collaborators: [] as string[],
@@ -274,6 +283,7 @@ async function openCreate() {
   createForm.inbox_type = 'website'
   createForm.name = ''
   createForm.description = ''
+  createForm.icon = ''
   createForm.welcome_title = ''
   createForm.welcome_message = ''
   createForm.collaborators = []
@@ -289,6 +299,7 @@ async function handleCreate() {
     await createInbox({
       name: createForm.name,
       description: createForm.description,
+      icon: createForm.icon,
       welcome_title: createForm.welcome_title,
       welcome_message: createForm.welcome_message,
       inbox_type: createForm.inbox_type,

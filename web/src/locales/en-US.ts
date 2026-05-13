@@ -130,6 +130,8 @@ export default {
     type: 'Type',
     description: 'Description',
     descriptionPlaceholder: 'Enter inbox description',
+    icon: 'Icon',
+    iconPlaceholder: 'Enter an image URL or short text',
     welcomeTitle: 'Welcome Title',
     welcomeTitlePlaceholder: 'Max 32 characters',
     welcomeMessage: 'Welcome Message',

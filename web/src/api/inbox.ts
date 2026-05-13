@@ -11,6 +11,7 @@ export function getInbox(id: string) {
 export function createInbox(data: {
   name: string
   description?: string
+  icon?: string
   welcome_title?: string
   welcome_message?: string
   inbox_type: string
@@ -22,6 +23,7 @@ export function createInbox(data: {
 
 export function updateInbox(id: string, data: {
   description?: string
+  icon?: string
   welcome_title?: string
   welcome_message?: string
   status?: string

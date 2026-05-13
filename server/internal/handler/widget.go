@@ -120,6 +120,7 @@ func (h *WidgetHandler) Auth(c *gin.Context) {
 		"pubsub_token":     ci.PubsubToken,
 		"contact_id":       contact.ID,
 		"contact_inbox_id": ci.ContactID,
+		"icon":             inbox.Icon,
 		"welcome_title":    inbox.WelcomeTitle,
 		"welcome_message":  inbox.WelcomeMessage,
 	})

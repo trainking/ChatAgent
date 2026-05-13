@@ -14,16 +14,16 @@ func NewInboxRepository(db *sqlx.DB) *InboxRepository {
 }
 
 func (r *InboxRepository) Create(inbox *model.Inbox) error {
-	query := `INSERT INTO inboxes (name, description, welcome_title, welcome_message, inbox_type, status, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at, updated_at`
-	return r.db.QueryRow(query, inbox.Name, inbox.Description, inbox.WelcomeTitle,
+	query := `INSERT INTO inboxes (name, description, icon, welcome_title, welcome_message, inbox_type, status, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, created_at, updated_at`
+	return r.db.QueryRow(query, inbox.Name, inbox.Description, inbox.Icon, inbox.WelcomeTitle,
 		inbox.WelcomeMessage, inbox.InboxType, inbox.Status, inbox.CreatedBy).
 		Scan(&inbox.ID, &inbox.CreatedAt, &inbox.UpdatedAt)
 }
 
 func (r *InboxRepository) FindByID(id string) (*model.Inbox, error) {
 	inbox := &model.Inbox{}
-	query := `SELECT id, name, description, welcome_title, welcome_message, inbox_type, status, created_by,
+	query := `SELECT id, name, description, icon, welcome_title, welcome_message, inbox_type, status, created_by,
 		created_at, updated_at FROM inboxes WHERE id = $1`
 	err := r.db.Get(inbox, query, id)
 	if err != nil {
@@ -34,7 +34,7 @@ func (r *InboxRepository) FindByID(id string) (*model.Inbox, error) {
 
 func (r *InboxRepository) FindByName(name string) (*model.Inbox, error) {
 	inbox := &model.Inbox{}
-	query := `SELECT id, name, description, welcome_title, welcome_message, inbox_type, status, created_by,
+	query := `SELECT id, name, description, icon, welcome_title, welcome_message, inbox_type, status, created_by,
 		created_at, updated_at FROM inboxes WHERE name = $1`
 	err := r.db.Get(inbox, query, name)
 	if err != nil {
@@ -49,11 +49,11 @@ func (r *InboxRepository) ListByUser(userID string, isAdmin bool) ([]model.Inbox
 	var args []interface{}
 
 	if isAdmin {
-		query = `SELECT i.id, i.name, i.description, i.welcome_title, i.welcome_message, i.inbox_type, i.status, i.created_by,
+		query = `SELECT i.id, i.name, i.description, i.icon, i.welcome_title, i.welcome_message, i.inbox_type, i.status, i.created_by,
 			i.created_at, i.updated_at, u.name AS creator_name, u.email AS creator_email
 			FROM inboxes i LEFT JOIN users u ON i.created_by = u.id ORDER BY i.created_at DESC`
 	} else {
-		query = `SELECT DISTINCT i.id, i.name, i.description, i.welcome_title, i.welcome_message, i.inbox_type, i.status, i.created_by,
+		query = `SELECT DISTINCT i.id, i.name, i.description, i.icon, i.welcome_title, i.welcome_message, i.inbox_type, i.status, i.created_by,
 			i.created_at, i.updated_at, u.name AS creator_name, u.email AS creator_email
 			FROM inboxes i
 			LEFT JOIN users u ON i.created_by = u.id
@@ -72,8 +72,8 @@ func (r *InboxRepository) ListByUser(userID string, isAdmin bool) ([]model.Inbox
 
 func (r *InboxRepository) Update(inbox *model.Inbox) error {
 	_, err := r.db.Exec(
-		`UPDATE inboxes SET description=$1, welcome_title=$2, welcome_message=$3, status=$4, updated_at=NOW() WHERE id=$5`,
-		inbox.Description, inbox.WelcomeTitle, inbox.WelcomeMessage, inbox.Status, inbox.ID,
+		`UPDATE inboxes SET description=$1, icon=$2, welcome_title=$3, welcome_message=$4, status=$5, updated_at=NOW() WHERE id=$6`,
+		inbox.Description, inbox.Icon, inbox.WelcomeTitle, inbox.WelcomeMessage, inbox.Status, inbox.ID,
 	)
 	return err
 }
